@@ -54,7 +54,7 @@ test('Content Editor only sees blocked words, not users/admins/audit log', async
   sessionStorage.setItem('ssa_admin_token', 'tok');
   routes['GET /admin/auth/me'] = () => json(200, { admin: { id: 2, email: 'e@x.org', name: 'Ed', role: 'content_editor' } });
   routes['GET /admin/blocked-words'] = () => json(200, { words: [{ id: 1, word: 'shit', kind: 'blocked' }] });
-  mount();
+  render(<MemoryRouter initialEntries={['/blocked-words']}><AuthProvider><App /></AuthProvider></MemoryRouter>);
   expect(await screen.findByRole('heading', { name: /blocked words/i })).toBeInTheDocument();
   expect(screen.queryByRole('link', { name: 'Users' })).toBeNull();
   expect(screen.queryByRole('link', { name: 'Admins' })).toBeNull();
