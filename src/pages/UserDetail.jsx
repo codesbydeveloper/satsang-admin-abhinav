@@ -7,6 +7,7 @@ import { initials } from '../components/Layout';
 
 const LANG = { en: 'English', gu: 'ગુજરાતી (Gujarati)' };
 const MODE = { sanatan: 'Sanatan', satsang: 'Satsang' };
+const GENDER = { male: 'Male', female: 'Female', prefer_not_to_say: 'Prefer not to say' };
 const RENAME_REASONS = ['Inappropriate username', 'Contains personal information', 'Impersonates someone', 'Requested by parent'];
 
 function AgeGroupEditor({ profile, onSaved }) {
@@ -132,6 +133,10 @@ export default function UserDetail() {
         </div>
         <dl className="facts">
           <div><dt>Account ID</dt><dd>#{a.id}</dd></div>
+          {/* private Sign Up details; null for accounts created before Sign Up asked for them */}
+          <div><dt>First name</dt><dd className="gu">{a.firstName || '—'}</dd></div>
+          <div><dt>Last name</dt><dd className="gu">{a.lastName || '—'}</dd></div>
+          <div><dt>Gender</dt><dd>{GENDER[a.gender] || a.gender || '—'}</dd></div>
           <div><dt>Language</dt><dd className="gu">{LANG[a.language] || a.language || '—'}</dd></div>
           <div><dt>Phone (contact only)</dt><dd>{a.phone || '—'}</dd></div>
           <div><dt>Joined</dt><dd title={fmt(a.createdAt)}>{fmtDate(a.createdAt)}</dd></div>

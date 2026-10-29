@@ -6,7 +6,7 @@ import App from '../App';
 import { AuthProvider } from '../auth';
 
 const json = (status, body) => Promise.resolve({ ok: status < 400, status, json: () => Promise.resolve(body) });
-const ACCOUNT = { id: 7, email: 'mom@example.com', accountType: 'parent', language: 'en', phone: null, emailVerified: true, emailVerifiedAt: '2026-10-20 09:00:00', parentPinSet: true, createdAt: '2026-10-20 08:59:00' };
+const ACCOUNT = { id: 7, email: 'mom@example.com', accountType: 'parent', firstName: 'Meera', lastName: 'Patel', gender: 'prefer_not_to_say', language: 'en', phone: null, emailVerified: true, emailVerifiedAt: '2026-10-20 09:00:00', parentPinSet: true, createdAt: '2026-10-20 08:59:00' };
 const KID = { id: 30, username: 'krishna_kid', avatarId: 3, avatarKey: 'peacock', age: 9, ageGroup: 'Bals/Balikas B', ageGroupOverridden: false, isChild: true, language: 'en', mode: 'satsang' };
 
 let deleteReply;
@@ -30,6 +30,9 @@ const mount = async () => {
 test('shows account info, child profiles and the age-group dropdown', async () => {
   await mount();
   expect(screen.getByRole('heading', { name: /child profiles/i })).toBeInTheDocument();
+  expect(screen.getByText('First name').nextSibling).toHaveTextContent('Meera');
+  expect(screen.getByText('Last name').nextSibling).toHaveTextContent('Patel');
+  expect(screen.getByText('Gender').nextSibling).toHaveTextContent('Prefer not to say');
   const card = screen.getByRole('region', { name: 'Profile krishna_kid' });
   expect(within(card).getByLabelText('Age group override')).toHaveValue('');
   expect(within(card).getByRole('button', { name: 'Rename krishna_kid' })).toBeInTheDocument();
