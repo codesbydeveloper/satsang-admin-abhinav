@@ -6,7 +6,7 @@ import { useOnTabReturn } from './ui';
 import { Icon, Logo } from './icons';
 
 const TITLES = [
-  ['/dashboard', 'Dashboard'], ['/users', 'Users'], ['/deletion-requests', 'Deletion requests'], ['/blocked-words', 'Blocked words'],
+  ['/dashboard', 'Dashboard'], ['/users', 'Users'], ['/deletion-requests', 'Deletion requests'], ['/referrals', 'Referrals'], ['/blocked-words', 'Blocked words'],
   ['/admins', 'Admins'], ['/audit-log', 'Audit log'], ['/account', 'My account'],
 ];
 export const initials = (s = '') => s.replace(/@.*/, '').split(/[\s._-]+/).filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join('') || '?';
@@ -36,6 +36,7 @@ export default function Layout() {
             {item('/deletion-requests', 'trash', 'Deletion requests', pending > 0 && <>
               <span className="nav-badge" aria-hidden="true">{pending}</span><span className="sr-only">, {pending} pending</span>
             </>)}
+            {item('/referrals', 'gift', 'Referrals')}
           </>}
           <div className="nav-label">Safety</div>
           {item('/blocked-words', 'ban', 'Blocked words')}

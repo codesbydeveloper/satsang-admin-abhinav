@@ -11,6 +11,7 @@ import Account from './pages/Account';
 import DeleteAccount from './pages/DeleteAccount';
 import Dashboard from './pages/Dashboard';
 import DeletionRequests from './pages/DeletionRequests';
+import Referrals from './pages/Referrals';
 
 export default function App() {
   const { admin, ready, isFull } = useAuth();
@@ -31,6 +32,7 @@ export default function App() {
           <Route path="/users" element={<Users />} />
           <Route path="/deletion-requests" element={<DeletionRequests />} />
           <Route path="/users/:id" element={<UserDetail />} />
+          <Route path="/referrals" element={<Referrals />} />
           <Route path="/admins" element={<Admins />} />
           <Route path="/audit-log" element={<AuditLog />} />
         </>}

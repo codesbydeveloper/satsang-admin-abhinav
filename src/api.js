@@ -60,6 +60,10 @@ export const adminApi = {
   dashboard: () => api('/admin/dashboard', { params: { days: 30, recent: 5, activity: 10 } }),
   // Deletion requests (list, approve, reject): SAMPLE DATA in src/api/deletionRequests.js until the backend has them.
   // Deletes the account and every profile on it (a parent's child profiles too); reason is audited.
+  // Referrals (Full Admin): settings (audited as referral_settings.updated) and the list (usernames, never emails).
+  referralSettings: () => api('/admin/referrals/settings'),
+  saveReferralSettings: (settings) => api('/admin/referrals/settings', { method: 'PUT', body: settings }),
+  referrals: (params) => api('/admin/referrals', { params }),
   deleteUserAccount: (accountId, reason) => api(`/admin/users/${accountId}`, { method: 'DELETE', body: { confirm: true, reason } }),
   // NOT CONNECTED YET: the screens are designed, the backend endpoints don't exist. Suggested routes:
   //   renameProfile: PATCH  /admin/users/profiles/:id/username { username, reason }
