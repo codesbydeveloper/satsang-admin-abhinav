@@ -15,5 +15,6 @@
 - [x] Whole-panel UI refresh (sidebar with icons, top bar, login, every page; light/dark; tablet drawer)
 - [x] User detail: Delete account popup on live `DELETE /admin/users/:accountId` (confirm + reason)
 - [x] User detail: owner's first name, last name and gender (private; from backend branch `m1/signup-fields`, "—" for older accounts)
+- [x] Referrals page (Full Admin only, client change 30 Oct 2026): the four referral settings (new user Sparks, referrer Sparks, window hours, max per referrer / unlimited), saved with the audit log, and the referrals list (code, referrer and referee usernames, status, dates); hidden from Content Editors (backend `m1/client-30oct`)
 - [ ] User detail: Rename username and Delete child profile popups — designed; need backend endpoints (see `src/api.js` NOT CONNECTED YET)
 - [ ] Verified by Abhinav and merged
