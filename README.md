@@ -5,11 +5,11 @@ React (Vite) panel for the Satsang Spark backend: admin login with authenticator
 ## Run
 ```bash
 npm install
-npm run dev        # http://localhost:5173 — forwards /api to the backend on http://localhost:3000
+npm run dev        # http://localhost:5173 — backend address is set in src/config.js (local or live)
 npm test           # 5 tests
 npm run build      # static files in dist/
 ```
-Start the backend first and create the first admin with `npm run seed:admin` there. For production set `VITE_API_BASE` (see `.env.example`) to the API address, and add the panel's address to the backend's `CORS_ORIGINS`.
+Start the backend first and create the first admin with `npm run seed:admin` there. For production uncomment the live `API_BASE_URL` in `src/config.js`, and add the panel's address to the backend's `CORS_ORIGINS`.
 
 ## Notes
 - The admin token is kept in `sessionStorage` (cleared when the tab closes) and sent as a Bearer header.

@@ -1,5 +1,7 @@
 // Thin client for the Satsang Spark backend (/api/v1). Errors come back as { error: { code, message } }.
-const BASE = `${import.meta.env.VITE_API_BASE || ''}/api/v1`;
+import { API_BASE_URL } from './config.js';
+
+const BASE = `${API_BASE_URL}/api/v1`;
 const KEY = 'ssa_admin_token';
 
 export function getToken() { try { return sessionStorage.getItem(KEY); } catch { return null; } }
