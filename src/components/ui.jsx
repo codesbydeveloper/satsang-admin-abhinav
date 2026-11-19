@@ -114,7 +114,8 @@ export function useAction() {
   return { busy, error, run, setError };
 }
 
-// The backend sends UTC DATETIMEs as 'YYYY-MM-DD HH:MM:SS' (no zone); browsers would read that as local time.
+// The backend stores every timestamp in UTC and sends ISO strings ending in "Z"; they are shown in the viewer's local
+// time. Older backends sent 'YYYY-MM-DD HH:MM:SS' (UTC, no zone), which browsers would read as local time: treat it as UTC.
 export const toDate = (d) => new Date(typeof d === 'string' && /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}(:\d{2})?$/.test(d) ? d.replace(' ', 'T') + 'Z' : d);
 
 export const fmt = (d) => (d ? toDate(d).toLocaleString() : '—');

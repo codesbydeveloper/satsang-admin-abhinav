@@ -13,9 +13,12 @@
  * POST /public/delete-account                 { email, password, confirm: true }  (no login)  202 { requested, requestId, status, requestedAt }
  *
  * Row = { id, accountId, accountType: 'adult'|'parent', source: 'app'|'web', status: 'pending'|'completed'|'rejected',
- *         username|null, email|null, emailVerified|null, childProfiles: number, profilesDeleted|null,
+ *         username|null, email|null, emailRetainedUntil|null, emailVerified|null, childProfiles: number, profilesDeleted|null,
  *         requestedAt, decidedAt|null, decidedBy: { id, name }|null, decisionNote|null }
- * username is null for parent accounts (no profile of their own); username/email/emailVerified are null once completed.
+ * Timestamps are ISO UTC strings ending in "Z". username is null for parent accounts (no profile of their own).
+ * Once completed, username/emailVerified are null; email is the retained copy (Full Admin only) until emailRetainedUntil,
+ * then null. emailRetainedUntil is set on completed rows that kept an email (in the past once it is erased).
+ * q also matches the retained email on completed rows (Full Admin only) until it is erased.
  */
 import { api } from '../api';
 

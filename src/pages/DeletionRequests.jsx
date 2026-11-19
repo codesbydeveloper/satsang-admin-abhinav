@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { approveRequest, getRequestById, getRequests, PAGE_SIZE, publishPendingCount, rejectRequest } from '../api/deletionRequests';
-import { Drawer, EmptyRow, fmt, Modal, PageHead, Pager, RefreshButton, TypePill, timeAgo, useOnTabReturn, useToast } from '../components/ui';
+import { Drawer, EmptyRow, fmt, fmtDate, Modal, PageHead, Pager, RefreshButton, toDate, TypePill, timeAgo, useOnTabReturn, useToast } from '../components/ui';
 import { Icon } from '../components/icons';
 
 const SOURCE = { app: 'In the app', web: 'Web page' };
@@ -22,6 +22,20 @@ const Verified = ({ value }) => (value == null ? <span className="muted">—</sp
   </span>
 ));
 const childrenText = (n) => `${n} child profile${n === 1 ? '' : 's'}`;
+
+// Completed rows keep the deleted account's email (Full Admin only) until emailRetainedUntil, then the purge erases it.
+export function EmailFact({ r, now = Date.now() }) {
+  const until = r.status === 'completed' ? r.emailRetainedUntil : null;
+  if (r.email) return (
+    <>
+      {r.email}
+      {until && <div className="cell-sub" title={fmt(until)}>Kept until {fmtDate(until)} – then erased automatically for privacy.</div>}
+    </>
+  );
+  if (r.status !== 'completed') return <span className="muted">—</span>;
+  const erased = until && toDate(until).getTime() <= now;
+  return <span className="muted">{erased ? '— (erased)' : '— (account deleted)'}</span>;
+}
 
 export default function DeletionRequests() {
   const [status, setStatus] = useState('pending');
@@ -169,7 +183,7 @@ function RequestDetails({ r, details }) {
       </div>
       <dl className="facts single">
         <div><dt>Account type</dt><dd><TypePill type={r.accountType} /></dd></div>
-        <div><dt>Email</dt><dd>{r.email || <span className="muted">— (account deleted)</span>}</dd></div>
+        <div><dt>Email</dt><dd><EmailFact r={r} /></dd></div>
         <div><dt>Requested from</dt><dd>{SOURCE[r.source] || r.source}</dd></div>
         <div><dt>Requested</dt><dd>{fmt(r.requestedAt)}</dd></div>
         {r.emailVerified != null && <div><dt>Email verified</dt><dd><Verified value={r.emailVerified} /> {r.emailVerified ? 'Yes' : 'No'}</dd></div>}

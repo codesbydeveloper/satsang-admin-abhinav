@@ -4,6 +4,8 @@ import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import App from '../App';
 import { AuthProvider } from '../auth';
+import { fmt, fmtDate, toDate } from '../components/ui';
+import { EmailFact } from '../pages/DeletionRequests';
 
 const json = (status, body) => Promise.resolve({ ok: status < 400, status, json: () => Promise.resolve(body) });
 const ago = (min) => new Date(Date.now() - min * 60000).toISOString();
@@ -179,4 +181,68 @@ test('Content Editor: no menu item, no API call', async () => {
   expect(await screen.findByRole('link', { name: 'Blocked words' })).toBeInTheDocument();
   expect(screen.queryByRole('link', { name: /Deletion requests/ })).toBeNull();
   expect(listCalls()).toHaveLength(0);
+});
+
+// ---- Retained email (Full Admin, completed rows) and UTC timestamps (19 Nov 2026) ----
+const days = (n) => new Date(Date.now() + n * 86400000).toISOString();
+const fact = (panel, label) => within(panel).getByText(label, { selector: 'dt' }).nextElementSibling;
+const openCompleted = async (row) => {
+  routes['GET /admin/deletion-requests'] = () => json(200, list([row], { pending: 0, completed: 1, rejected: 0, all: 1 }));
+  routes[`GET /admin/deletion-requests/${row.id}`] = () => json(200, { request: row, account: null, profiles: [] });
+  asRole('full_admin'); const user = userEvent.setup(); mount();
+  const tr = await rowFor(displayNameRe(row));
+  await user.click(within(tr).getByRole('button', { name: /View/ }));
+  const panel = screen.getByRole('dialog', { name: 'Deletion request' });
+  await waitFor(() => expect(global.fetch.mock.calls.some(([u]) => u.endsWith(`/admin/deletion-requests/${row.id}`))).toBe(true));
+  return { panel, tr };
+};
+const displayNameRe = (r) => (r.username ? r.username : '\(adult account\)');
+
+test('completed row with a retained email: list shows it under the name; drawer shows it with the "Kept until" note', async () => {
+  const until = days(29);
+  const row = { ...DONE, email: 'ravi@x.org', emailRetainedUntil: until, deletedByOwner: true, decidedBy: null };
+  const { panel, tr } = await openCompleted(row);
+  expect(within(tr).getByText('ravi@x.org')).toBeInTheDocument();
+  const email = fact(panel, 'Email');
+  expect(email).toHaveTextContent('ravi@x.org');
+  const dateText = fmtDate(until);
+  const note = within(email).getByText(`Kept until ${dateText} – then erased automatically for privacy.`);
+  expect(note).toHaveClass('cell-sub');   // the small grey note style
+  expect(note).toHaveAttribute('title', fmt(until));
+});
+
+test('completed row whose retained email has passed its date shows "— (erased)"', async () => {
+  const { panel } = await openCompleted({ ...DONE, email: null, emailRetainedUntil: days(-1) });
+  expect(fact(panel, 'Email')).toHaveTextContent(/^— \(erased\)$/);
+  expect(within(panel).queryByText(/Kept until/)).toBeNull();
+});
+
+test('completed row that kept no email shows "— (account deleted)"', async () => {
+  const { panel } = await openCompleted({ ...DONE, email: null, emailRetainedUntil: null });
+  expect(fact(panel, 'Email')).toHaveTextContent(/^— \(account deleted\)$/);
+});
+
+test('EmailFact: the cut-off is compared with now; a pending row without email shows a dash', () => {
+  const until = '2026-12-01T00:00:00.000Z';
+  const at = (iso) => render(<EmailFact r={{ status: 'completed', email: null, emailRetainedUntil: until }} now={Date.parse(iso)} />).container.textContent;
+  expect(at('2026-11-30T23:59:59.000Z')).toBe('— (account deleted)');
+  expect(at('2026-12-01T00:00:00.000Z')).toBe('— (erased)');
+  expect(render(<EmailFact r={{ status: 'pending', email: null }} />).container.textContent).toBe('—');
+});
+
+test('in-app deletion: Requested and Handled show the same local time for the same UTC moment', async () => {
+  const at = '2026-11-19T12:02:37.000Z';
+  const { panel } = await openCompleted({ ...DONE, requestedAt: at, decidedAt: at, decidedBy: null, deletedByOwner: true });
+  const local = new Date(at).toLocaleString();
+  expect(fact(panel, 'Requested')).toHaveTextContent(local);
+  expect(fact(panel, 'Handled')).toHaveTextContent(local);
+});
+
+test('timestamp formatting: ISO "Z" strings are read as UTC and shown in local time; legacy zone-less strings too', () => {
+  const iso = '2026-11-19T12:02:37.000Z';
+  expect(toDate(iso).toISOString()).toBe(iso);
+  expect(toDate('2026-11-19 12:02:37').toISOString()).toBe(iso);   // older backend format, UTC without a zone
+  expect(fmt(iso)).toBe(new Date(Date.UTC(2026, 10, 19, 12, 2, 37)).toLocaleString());
+  expect(fmt('2026-11-19 12:02:37')).toBe(fmt(iso));
+  expect(fmt(null)).toBe('—');
 });
