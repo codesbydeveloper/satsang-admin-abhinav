@@ -4,7 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import App from '../App';
 import { AuthProvider } from '../auth';
-import { AGE_GROUPS } from '../api';
+import { AGE_GROUPS } from '../ageGroups';
 import { timeAgo, toDate } from '../components/ui';
 
 const json = (status, body) => Promise.resolve({ ok: status < 400, status, json: () => Promise.resolve(body) });
@@ -13,9 +13,9 @@ const json = (status, body) => Promise.resolve({ ok: status < 400, status, json:
 const sqlUtc = (msAgo) => new Date(Date.now() - msAgo).toISOString().slice(0, 19).replace('T', ' ');
 const series = Array.from({ length: 30 }, (_, i) => ({ date: new Date(Date.now() - (29 - i) * 864e5).toISOString().slice(0, 10), count: i % 5 }));
 const DASH = {
-  generatedAt: new Date().toISOString(), timeZone: 'America/New_York',
-  totals: { accounts: 1248, adultAccounts: 859, parentAccounts: 389, profiles: 1391, childProfiles: 532, newRegistrationsToday: 17 },
-  ageGroups: AGE_GROUPS.map((ageGroup, i) => ({ ageGroup, count: i * 10 })),
+  generatedAt: new Date().toISOString(), timeZone: 'Asia/Kolkata',
+  totals: { accounts: 1248, adultAccounts: 859, parentAccounts: 389, profiles: 1391, childProfiles: 532, newRegistrationsToday: 17, pendingDeletions: 3 },
+  ageGroups: AGE_GROUPS.map(({ key, label }, i) => ({ ageGroup: key, label, count: i * 10 })),
   registrations: { days: 30, total: series.reduce((s, x) => s + x.count, 0), series },
   modes: [{ key: 'sanatan', count: 512 }, { key: 'satsang', count: 870 }, { key: 'not_set', count: 9 }],
   languages: [{ key: 'en', count: 948 }, { key: 'gu', count: 443 }],
@@ -58,19 +58,52 @@ test('Full Admin: calls the dashboard API and shows welcome bar + live cards', a
   expect(screen.queryByRole('note')).toBeNull();   // no sample-data banner any more
 });
 
-test('pending deletions card shows "not tracked" and opens the Deletion Requests page', async () => {
+test('pending deletions card shows the live count and opens Deletion requests on the Pending tab', async () => {
   asRole('full_admin'); const user = userEvent.setup(); mount();
   const card = await screen.findByLabelText('Pending deletion requests');
-  expect(card).not.toHaveClass('warn');
-  expect(card).toHaveTextContent(/not tracked yet/i);
+  expect(card).toHaveClass('warn');
+  expect(card).toHaveTextContent('3');
+  expect(card).toHaveTextContent(/needs review/i);
+  expect(card).not.toHaveTextContent(/not tracked/i);
+  expect(card).toHaveAttribute('href', '/deletion-requests?status=pending');
   await user.click(card);
   expect(await screen.findByRole('heading', { name: 'Deletion requests' })).toBeInTheDocument();
+  expect(within(screen.getByRole('group', { name: 'Status' })).getByRole('button', { name: /^pending/i })).toHaveAttribute('aria-pressed', 'true');
+});
+
+test('no pending deletions: "All clear", not highlighted', async () => {
+  dashboard = () => json(200, { ...DASH, totals: { ...DASH.totals, pendingDeletions: 0 } });
+  asRole('full_admin'); mount();
+  const card = await screen.findByLabelText('Pending deletion requests');
+  expect(card).not.toHaveClass('warn');
+  expect(card).toHaveTextContent(/0\s*All clear/);
+});
+
+test('"New registrations today" names the backend time zone, not a fixed city', async () => {
+  asRole('full_admin'); mount();
+  const today = await screen.findByLabelText('New registrations today');
+  expect(today).toHaveTextContent('Since midnight, Kolkata time');
+  expect(today).toHaveAttribute('title', 'Days are counted in Asia/Kolkata');
+  expect(today).not.toHaveTextContent(/new york/i);
+});
+
+test('age groups: one consistent label per group in the chart, tooltip and recent registrations', async () => {
+  asRole('full_admin'); const user = userEvent.setup(); mount();
+  await screen.findByRole('heading', { name: 'Users by age group' });
+  const labels = [...document.querySelectorAll('.bar-label')].map((e) => e.textContent);
+  expect(labels).toEqual(AGE_GROUPS.map((g) => g.label));
+  expect(labels).toContain('Yuvaks/Yuvatis A');
+  expect(labels).not.toContain('Yuvak/Yuvatis A');
+  await user.hover(screen.getByText('Yuvaks/Yuvatis A', { selector: '.bar-label' }));
+  expect(screen.getByRole('tooltip')).toHaveTextContent('Yuvaks/Yuvatis A');
+  expect(screen.getAllByText('Yuvaks/Yuvatis A', { selector: 'td' }).length).toBe(1);   // radha_seva in recent registrations
+  expect(document.body).not.toHaveTextContent('Yuvak/Yuvatis');
 });
 
 test('charts: 9 age groups, 7/30 day toggle, mode (with not chosen) and language donuts', async () => {
   asRole('full_admin'); const user = userEvent.setup(); mount();
   await screen.findByRole('heading', { name: 'Users by age group' });
-  for (const g of AGE_GROUPS) expect(screen.getByText(g, { selector: '.bar-label' })).toBeInTheDocument();
+  for (const g of AGE_GROUPS) expect(screen.getByText(g.label, { selector: '.bar-label' })).toBeInTheDocument();
   expect(screen.getAllByTestId('line-hit')).toHaveLength(7);
   await user.click(screen.getByRole('button', { name: 'Last 30 days' }));
   expect(screen.getAllByTestId('line-hit')).toHaveLength(30);
@@ -109,7 +142,7 @@ test('empty database: zeros and empty-state messages, no crash', async () => {
   asRole('full_admin');
   dashboard = () => json(200, { ...DASH,
     totals: { accounts: 0, adultAccounts: 0, parentAccounts: 0, profiles: 0, childProfiles: 0, newRegistrationsToday: 0 },
-    ageGroups: AGE_GROUPS.map((ageGroup) => ({ ageGroup, count: 0 })),
+    ageGroups: AGE_GROUPS.map(({ key }) => ({ ageGroup: key, count: 0 })),
     registrations: { days: 30, total: 0, series: series.map((s) => ({ ...s, count: 0 })) },
     modes: [{ key: 'sanatan', count: 0 }, { key: 'satsang', count: 0 }], languages: [{ key: 'en', count: 0 }, { key: 'gu', count: 0 }],
     recentRegistrations: [], recentAdminActivity: [] });

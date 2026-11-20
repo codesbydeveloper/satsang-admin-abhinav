@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { adminApi } from '../api';
+import { ageGroupLabel } from '../ageGroups';
 import { useAuth } from '../auth';
 import { BarList, Donut, LineChart } from '../components/charts';
 import { fmt, timeAgo, useAction } from '../components/ui';
@@ -34,7 +35,10 @@ function WelcomeBar({ admin, isFull }) {
   );
 }
 
-function SummaryCards({ s }) {
+// "Kolkata time" from "Asia/Kolkata" (the backend's DASHBOARD_TIMEZONE, sent as timeZone).
+export const zoneName = (tz) => (tz ? `${tz.split('/').pop().replace(/_/g, ' ')} time` : 'server time');
+
+function SummaryCards({ s, timeZone }) {
   const card = (key, label, value, extra = {}) => {
     const body = (
       <>
@@ -45,10 +49,10 @@ function SummaryCards({ s }) {
     );
     const cls = `stat${extra.warn ? ' warn' : ''}`;
     return extra.to
-      ? <Link key={key} to={extra.to} className={cls} aria-label={label}>{body}</Link>
-      : <div key={key} className={cls} aria-label={label}>{body}</div>;
+      ? <Link key={key} to={extra.to} className={cls} aria-label={label} title={extra.title}>{body}</Link>
+      : <div key={key} className={cls} aria-label={label} title={extra.title}>{body}</div>;
   };
-  // The backend has no deletion-request queue yet (accounts are deleted immediately), so no count to show.
+  // Deletion requests with status pending (web requests waiting for a Full Admin); an older backend sends none.
   const pending = s.pendingDeletions;
   const hasPending = typeof pending === 'number';
   return (
@@ -57,10 +61,10 @@ function SummaryCards({ s }) {
       {card('adult', 'Adult / independent', s.adultAccounts)}
       {card('parent', 'Parent accounts', s.parentAccounts)}
       {card('child', 'Child profiles', s.childProfiles)}
-      {card('today', 'New registrations today', s.newRegistrationsToday, { hint: 'Since midnight, New York time' })}
+      {card('today', 'New registrations today', s.newRegistrationsToday, { hint: `Since midnight, ${zoneName(timeZone)}`, title: timeZone ? `Days are counted in ${timeZone}` : undefined })}
       {card('deletions', 'Pending deletion requests', hasPending ? pending : '—', {
-        to: '/deletion-requests', warn: hasPending && pending > 0,
-        hint: !hasPending ? 'Not tracked yet' : pending > 0 ? '⚠ Needs review' : 'All clear',
+        to: '/deletion-requests?status=pending', warn: hasPending && pending > 0,
+        hint: !hasPending ? 'Not available' : pending > 0 ? '⚠ Needs review' : 'All clear',
       })}
     </div>
   );
@@ -103,7 +107,7 @@ function RecentRegistrations({ rows }) {
               <tr key={`${r.type}-${r.accountId}-${r.profileId ?? 'x'}`}>
                 <td className="gu">{r.username || <span className="muted">(parent account)</span>}</td>
                 <td>{TYPE_LABEL[r.type] || r.type}</td>
-                <td>{r.ageGroup || '—'}</td>
+                <td>{ageGroupLabel(r.ageGroup) || '—'}</td>
                 <td title={fmt(r.createdAt)}>{timeAgo(r.createdAt)}</td>
                 <td><Link className="btn-small" to={`/users/${r.accountId}`}>View</Link></td>
               </tr>
@@ -184,11 +188,11 @@ export default function Dashboard() {
           {!data && !error && <Skeleton />}
           {data && (
             <>
-              <SummaryCards s={data.totals} />
+              <SummaryCards s={data.totals} timeZone={data.timeZone} />
               <div className="dash-grid">
                 <Panel title="Users by age group">
                   <p className="muted">Profiles in each age group (adults and children)</p>
-                  <BarList data={data.ageGroups.map((g) => ({ label: g.ageGroup, value: g.count }))} />
+                  <BarList data={data.ageGroups.map((g) => ({ label: ageGroupLabel(g.ageGroup), value: g.count }))} />
                 </Panel>
                 <Registrations data={data.registrations.series} />
                 <Panel title="Users by mode and language" className="wide">

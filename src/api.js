@@ -83,4 +83,4 @@ const notConnected = () => Promise.reject(new ApiError(501, 'NOT_CONNECTED', 'Th
 // The public delete-account page uses submitPublicRequest in src/api/deletionRequests.js (sample data for now).
 // When it is connected, call api(..., { token: '' }) so an admin token in this browser is never sent.
 
-export const AGE_GROUPS = ['Shishu', 'Bals/Balikas A', 'Bals/Balikas B', 'Bals/Balikas C', 'Kishors/Kishoris A', 'Kishors/Kishoris B', 'Yuvak/Yuvatis A', 'Yuvaks/Yuvatis B', 'Vadil'];
+// Age groups (keys + display labels): src/ageGroups.js is the one list.

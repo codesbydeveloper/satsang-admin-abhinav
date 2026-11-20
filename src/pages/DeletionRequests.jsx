@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { ageGroupLabel } from '../ageGroups';
 import { approveRequest, getRequestById, getRequests, PAGE_SIZE, publishPendingCount, rejectRequest } from '../api/deletionRequests';
 import { Drawer, EmptyRow, fmt, fmtDate, Modal, PageHead, Pager, RefreshButton, toDate, TypePill, timeAgo, useOnTabReturn, useToast } from '../components/ui';
 import { Icon } from '../components/icons';
@@ -38,7 +40,9 @@ export function EmailFact({ r, now = Date.now() }) {
 }
 
 export default function DeletionRequests() {
-  const [status, setStatus] = useState('pending');
+  // ?status=pending|completed|rejected|all picks the tab (the dashboard card links to ?status=pending).
+  const [params] = useSearchParams();
+  const [status, setStatus] = useState(() => (TABS.some(([k]) => k === params.get('status')) ? params.get('status') : 'pending'));
   const [search, setSearch] = useState('');
   const [q, setQ] = useState('');
   const [source, setSource] = useState('all');
@@ -202,7 +206,7 @@ function RequestDetails({ r, details }) {
         {children === null ? <p className="muted">Loading…</p>
           : children.length === 0 ? <p className="muted">None. This account has no child profiles.</p>
             : <ul className="child-list">{children.map((c) => (
-              <li key={c.id}><Icon name="child" size={16} /><span className="gu">{c.username}</span><span className="pill muted">{c.ageGroup}</span></li>
+              <li key={c.id}><Icon name="child" size={16} /><span className="gu">{c.username}</span><span className="pill muted">{ageGroupLabel(c.ageGroup)}</span></li>
             ))}</ul>}
       </>}
     </>

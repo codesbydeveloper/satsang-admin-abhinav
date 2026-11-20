@@ -246,3 +246,10 @@ test('timestamp formatting: ISO "Z" strings are read as UTC and shown in local t
   expect(fmt('2026-11-19 12:02:37')).toBe(fmt(iso));
   expect(fmt(null)).toBe('—');
 });
+
+test('a link with ?status=rejected opens the Rejected tab (the dashboard card links to ?status=pending)', async () => {
+  asRole('full_admin');
+  render(<MemoryRouter initialEntries={['/deletion-requests?status=rejected']}><AuthProvider><App /></AuthProvider></MemoryRouter>);
+  expect(await screen.findByRole('button', { name: /^Rejected/ })).toHaveAttribute('aria-pressed', 'true');
+  await waitFor(() => expect(listCalls()[0]).toMatch(/status=rejected/));
+});

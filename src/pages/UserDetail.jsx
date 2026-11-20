@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { adminApi, AGE_GROUPS } from '../api';
+import { adminApi } from '../api';
+import { AGE_GROUPS, ageGroupLabel } from '../ageGroups';
 import { Err, fmt, fmtDate, Modal, TypePill, useAction, YesNo } from '../components/ui';
 import { Icon } from '../components/icons';
 import { initials } from '../components/Layout';
@@ -24,7 +25,7 @@ function AgeGroupEditor({ profile, onSaved }) {
       <label>Change age group
         <select value={value} onChange={(e) => setValue(e.target.value)} aria-label="Age group override">
           <option value="">Automatic (from date of birth)</option>
-          {AGE_GROUPS.map((g) => <option key={g} value={g}>{g}</option>)}
+          {AGE_GROUPS.map((g) => <option key={g.key} value={g.key}>{g.label}</option>)}
         </select>
       </label>
       <div className="override-form">
@@ -171,7 +172,7 @@ export default function UserDetail() {
               </button>
             </div>
             <dl className="facts">
-              <div><dt>Age group</dt><dd>{p.ageGroup}{p.ageGroupOverridden && <span className="tag">set by admin</span>}</dd></div>
+              <div><dt>Age group</dt><dd>{ageGroupLabel(p.ageGroup) || '—'}{p.ageGroupOverridden && <span className="tag">set by admin</span>}</dd></div>
               <div><dt>Age</dt><dd>{p.age ?? '—'}</dd></div>
               <div><dt>Mode</dt><dd>{MODE[p.mode] || <span className="muted">Not chosen</span>}</dd></div>
               <div><dt>Language</dt><dd className="gu">{LANG[p.language] || p.language}</dd></div>

@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { adminApi } from '../api';
 import { createUser } from '../api/users';
 import { useAuth } from '../auth';
+import { ageGroupLabel } from '../ageGroups';
 import { EmptyRow, Err, fmt, fmtDate, isEmail, Modal, PageHead, Pager, RefreshButton, TypePill, useAction, useOnTabReturn, useToast, YesNo } from '../components/ui';
 import { Icon } from '../components/icons';
 import { initials } from '../components/Layout';
@@ -59,7 +60,7 @@ export default function Users() {
                     </td>
                     <td className="cell-sub">{r.email}</td>
                     <td><TypePill type={r.isChild ? 'child' : r.accountType} /></td>
-                    <td>{r.ageGroup || <span className="muted">—</span>}{r.ageGroupOverridden && <span className="tag">override</span>}</td>
+                    <td>{ageGroupLabel(r.ageGroup) || <span className="muted">—</span>}{r.ageGroupOverridden && <span className="tag">override</span>}</td>
                     <td><YesNo value={r.emailVerified} /></td>
                     <td title={fmt(r.createdAt)}>{fmtDate(r.createdAt)}</td>
                     <td className="actions"><Link className="btn-small" to={`/users/${r.accountId}`} aria-label={`View ${r.username || r.email}`}>View</Link></td>
