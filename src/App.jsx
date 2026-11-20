@@ -12,6 +12,7 @@ import DeleteAccount from './pages/DeleteAccount';
 import Dashboard from './pages/Dashboard';
 import DeletionRequests from './pages/DeletionRequests';
 import Referrals from './pages/Referrals';
+import AcceptInvite from './pages/AcceptInvite';
 
 export default function App() {
   const { admin, ready, isFull } = useAuth();
@@ -19,6 +20,8 @@ export default function App() {
   // Public page for app users: no admin login, no admin menus.
   if (pathname === '/delete-account') return <DeleteAccount />;
   if (pathname === '/delete-account/confirmed') return <DeleteAccount confirmed />;
+  // Invite link from the email: works logged in or out, never uses the admin session.
+  if (pathname === '/accept-invite') return <AcceptInvite />;
   if (!ready) return <p className="center muted">Loading…</p>;
   if (!admin) return <Login />;
   // Content Editors only see their dashboard and the blocked-words list (backend enforces this too).

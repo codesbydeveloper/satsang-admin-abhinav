@@ -35,5 +35,6 @@ Payments release only on approval of each milestone (see contract 11.1).
 ## This repo: satsang-spark-admin
 - React (Vite), talks only to the backend REST API (`/api/v1/admin/*`; spec at the backend's `/api-docs.json`).
 - Login is two steps: password -> 6-digit code sent by email (`/admin/auth/verify-otp`, `/resend-otp`) -> admin token. The challenge token is kept in memory only.
+- New admins are invited by email (Admins page); they choose a password on the public `/accept-invite?token=…` page. The invite token is never stored or sent anywhere but the backend.
 - Roles: Full Admin sees everything; Content Editor sees content and the blocked-words list only (hide menus the role cannot use, and still handle 403s).
 - M1 screens: login + email code, admin management, user search + age-group override, blocked words, audit log. Content sections arrive with M2/M3.

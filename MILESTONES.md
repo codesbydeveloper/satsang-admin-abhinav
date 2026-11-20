@@ -2,7 +2,8 @@
 ## M1
 - [x] Project setup (Vite + React + router), API client with token handling
 - [x] Login: password -> 6-digit code sent by email (resend with 60s countdown) -> session (authenticator app removed 20 Nov 2026)
-- [x] Admin management (Full Admin): list, create, role, deactivate, reset password
+- [x] Admin management (Full Admin): invite by email (name, email, role), status Active / Invited (expiry) / Inactive, resend or cancel invite, change role, deactivate / reactivate, emergency password reset; own row protected (20 Nov 2026)
+- [x] Public `/accept-invite?token=…` page: shows the invite, set password (12+ chars), invalid / expired screens
 - [x] User search, user detail, age-group override with reason
 - [x] Blocked-words list (Full Admin + Content Editor)
 - [x] Audit log viewer with filters

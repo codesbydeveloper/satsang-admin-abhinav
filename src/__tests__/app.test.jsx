@@ -159,7 +159,7 @@ test('Admins and My account have no two-factor column, badge or reset button', a
   const { unmount } = mount('/admins');
   expect(await screen.findByText('b@x.org')).toBeInTheDocument();
   expect(document.body).not.toHaveTextContent(banned);
-  expect(screen.getAllByRole('button', { name: /reset password/i })).toHaveLength(2);
+  expect(screen.getAllByRole('button', { name: /reset password/i })).toHaveLength(1);   // not on your own row
   unmount();
   mount('/account');
   expect(await screen.findByRole('heading', { name: /change password/i })).toBeInTheDocument();

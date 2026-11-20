@@ -48,7 +48,12 @@ export const adminApi = {
   changePassword: (currentPassword, newPassword) => api('/admin/auth/change-password', { method: 'POST', body: { currentPassword, newPassword } }),
   admins: () => api('/admin/admins'),
   createAdmin: (b) => api('/admin/admins', { method: 'POST', body: b }),
-  updateAdmin: (id, b) => api(`/admin/admins/${id}`, { method: 'PATCH', body: b }),
+  updateAdmin: (id, b) => api(`/admin/admins/${id}`, { method: 'PATCH', body: b }),   // { role? , active? }
+  resendInvite: (id) => api(`/admin/admins/${id}/resend-invite`, { method: 'POST' }),
+  cancelInvite: (id) => api(`/admin/admins/${id}`, { method: 'DELETE' }),
+  // Public invite page: token: '' so an admin token in this browser is never sent along.
+  inviteInfo: (inviteToken) => api(`/admin/auth/invite/${encodeURIComponent(inviteToken)}`, { token: '' }),
+  acceptInvite: (inviteToken, password) => api('/admin/auth/accept-invite', { method: 'POST', token: '', body: { token: inviteToken, password } }),
   resetAdminPassword: (id, newPassword) => api(`/admin/admins/${id}/reset-password`, { method: 'POST', body: { newPassword } }),
   users: (params) => api('/admin/users', { params }),
   user: (id) => api(`/admin/users/${id}`),
