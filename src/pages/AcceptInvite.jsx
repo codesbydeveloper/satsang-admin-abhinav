@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { adminApi } from '../api';
 import { Err } from '../components/ui';
-import { Icon, Logo } from '../components/icons';
+import { Icon } from '../components/icons';
+import { FullLogo } from '../components/brand';
 import { ROLE_LABEL } from './Admins';
 
 // Public page from the invite email: /accept-invite?token=...  No admin login needed.
@@ -53,7 +54,7 @@ export default function AcceptInvite() {
   return (
     <div className="auth">
       <div className="auth-card">
-        <div className="auth-brand"><Logo size={40} /><div>Satsang Spark<small>Admin Panel</small></div></div>
+        <FullLogo />
         {state === 'loading' && <p className="muted" role="status">Checking your invite…</p>}
 
         {(state === 'invalid' || state === 'expired') && (

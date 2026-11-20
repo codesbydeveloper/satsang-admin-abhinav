@@ -148,7 +148,8 @@ test('no authenticator / QR / two-factor texts are left on the login screens', a
   expect(document.body).not.toHaveTextContent(banned);
   await toCodeStep(user);
   expect(document.body).not.toHaveTextContent(banned);
-  expect(screen.queryByRole('img')).toBeNull();
+  // The only image is the official logo (no QR code).
+  expect(screen.getAllByRole('img').map((i) => i.getAttribute('src'))).toEqual([expect.stringMatching(/logo-full/)]);
 });
 
 test('Admins and My account have no two-factor column, badge or reset button', async () => {

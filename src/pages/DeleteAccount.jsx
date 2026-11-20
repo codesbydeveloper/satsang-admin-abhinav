@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { submitPublicRequest } from '../api/deletionRequests';
 import { Err, isEmail, useAction } from '../components/ui';
-import { Icon, Logo } from '../components/icons';
+import { Icon } from '../components/icons';
+import { Spark } from '../components/brand';
 
 // Public "Request Account Deletion" page (contract: deletion in-app AND via an external web page; Google Play Data Safety).
 // No admin login. The person proves ownership with the account email + password (POST /public/delete-account);
@@ -79,7 +80,7 @@ export default function DeleteAccount({ confirmed = false }) {
     <div className="public-page" lang={lang}>
       <div className="auth-card wide">
         <div className="public-top">
-          <div className="auth-brand"><Logo size={40} /><div>Satsang Spark<small>{t.sub}</small></div></div>
+          <div className="auth-brand"><Spark size={40} /><div>Satsang Spark<small>{t.sub}</small></div></div>
           <div className="segmented" role="group" aria-label="Language">
             <button type="button" aria-pressed={lang === 'en'} onClick={() => setLang('en')} lang="en">English</button>
             <button type="button" aria-pressed={lang === 'gu'} onClick={() => setLang('gu')} lang="gu">ગુજરાતી</button>

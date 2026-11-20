@@ -37,17 +37,3 @@ export function Icon({ name, size = 18, className = '' }) {
     </svg>
   );
 }
-
-// Brand mark: a spark in a saffron tile.
-export function Logo({ size = 34 }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 40 40" aria-hidden="true" focusable="false" className="logo">
-      <defs>
-        <linearGradient id="ss-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#f59e0b" /><stop offset="1" stopColor="#c2410c" /></linearGradient>
-      </defs>
-      <rect width="40" height="40" rx="10" fill="url(#ss-g)" />
-      <path d="M20 7l2.6 8.4L31 18l-8.4 2.6L20 29l-2.6-8.4L9 18l8.4-2.6z" fill="#fff" />
-      <circle cx="29" cy="29" r="2.2" fill="#fff" opacity=".85" />
-    </svg>
-  );
-}

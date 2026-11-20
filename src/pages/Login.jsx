@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { adminApi } from '../api';
 import { useAuth } from '../auth';
 import { Err } from '../components/ui';
-import { Icon, Logo } from '../components/icons';
+import { Icon } from '../components/icons';
+import { FullLogo } from '../components/brand';
 
 // Login is two steps: email + password -> 6-digit code sent by email -> signed in.
 // The challenge token lives only in this component's state (never in storage); a reload starts over.
@@ -109,7 +110,7 @@ export default function Login() {
   return (
     <div className="auth">
       <div className="auth-card">
-        <div className="auth-brand"><Logo size={40} /><div>Satsang Spark<small>Admin Panel</small></div></div>
+        <FullLogo />
         <div className="steps" aria-hidden="true"><span className="on" /><span className={step !== 'password' ? 'on' : ''} /></div>
         {step === 'password' ? (
           <>

@@ -3,7 +3,8 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../auth';
 import { getPendingCount, onPendingCount } from '../api/deletionRequests';
 import { useOnTabReturn } from './ui';
-import { Icon, Logo } from './icons';
+import { Icon } from './icons';
+import { Spark } from './brand';
 
 const TITLES = [
   ['/dashboard', 'Dashboard'], ['/users', 'Users'], ['/deletion-requests', 'Deletion requests'], ['/referrals', 'Referrals'], ['/blocked-words', 'Blocked words'],
@@ -27,7 +28,7 @@ export default function Layout() {
   return (
     <div className={`shell${open ? ' nav-open' : ''}`}>
       <aside className="sidebar" id="sidebar">
-        <div className="brand"><Logo /><div>Satsang Spark<small>Admin Panel</small></div></div>
+        <div className="brand"><Spark size={36} /><div>Satsang Spark<small>Admin Panel</small></div></div>
         <nav aria-label="Main">
           {item('/dashboard', 'dashboard', 'Dashboard')}
           {isFull && <>
