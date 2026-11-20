@@ -22,7 +22,6 @@ export default function Admins() {
   }); };
   const patch = (a, body) => run(async () => { await adminApi.updateAdmin(a.id, body); await load(); });
   const toggle = (a) => { if (!a.isActive || window.confirm(`Deactivate ${a.email}? They will be signed out and cannot log in.`)) patch(a, { isActive: !a.isActive }); };
-  const reset2fa = (a) => { if (window.confirm(`Reset two-factor for ${a.email}? They will set up a new authenticator at next login.`)) run(async () => { await adminApi.resetAdmin2fa(a.id); await load(); }); };
   const resetPw = (a) => { const pw = window.prompt(`New temporary password for ${a.email} (12+ characters):`); if (pw) run(async () => { await adminApi.resetAdminPassword(a.id, pw); await load(); }); };
 
   return (
@@ -32,9 +31,9 @@ export default function Admins() {
       <div className="card flush">
         <div className="table-scroll">
           <table>
-            <thead><tr><th>Admin</th><th>Role</th><th>Two-factor</th><th>Last login</th><th>Status</th><th className="right">Actions</th></tr></thead>
+            <thead><tr><th>Admin</th><th>Role</th><th>Last login</th><th>Status</th><th className="right">Actions</th></tr></thead>
             <tbody>
-              {!list && <EmptyRow cols={6} icon="shield">Loading admins…</EmptyRow>}
+              {!list && <EmptyRow cols={5} icon="shield">Loading admins…</EmptyRow>}
               {list && list.map((a) => (
                 <tr key={a.id} className={a.isActive ? '' : 'off'}>
                   <td>
@@ -48,12 +47,10 @@ export default function Admins() {
                       <option value="full_admin">Full Admin</option><option value="content_editor">Content Editor</option>
                     </select>
                   </td>
-                  <td>{a.totpEnabled ? <span className="pill ok dot-ok">On</span> : <span className="pill warn">Not set up</span>}</td>
                   <td title={fmt(a.lastLoginAt)}>{a.lastLoginAt ? timeAgo(a.lastLoginAt) : <span className="muted">Never</span>}</td>
                   <td>{a.isActive ? <span className="pill ok dot-ok">Active</span> : <span className="pill muted dot-off">Deactivated</span>}</td>
                   <td className="actions">
                     {a.id !== me.id && <button className={`link${a.isActive ? ' danger' : ''}`} onClick={() => toggle(a)}>{a.isActive ? 'Deactivate' : 'Activate'}</button>}
-                    <button className="link" onClick={() => reset2fa(a)}>Reset 2FA</button>
                     <button className="link" onClick={() => resetPw(a)}>Reset password</button>
                   </td>
                 </tr>
@@ -64,7 +61,7 @@ export default function Admins() {
       </div>
 
       <div className="card" id="add-admin">
-        <div className="card-head"><div><h3>Add an admin</h3><p className="muted">They sign in with the temporary password, then set up their authenticator app.</p></div></div>
+        <div className="card-head"><div><h3>Add an admin</h3><p className="muted">They sign in with the temporary password and a 6-digit code sent to their email.</p></div></div>
         <form onSubmit={create}>
           <div className="form-grid">
             <label>Email<input type="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} placeholder="name@example.org" required /></label>

@@ -1,32 +1,110 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { adminApi } from '../api';
 import { useAuth } from '../auth';
-import { Err, useAction } from '../components/ui';
+import { Err } from '../components/ui';
 import { Icon, Logo } from '../components/icons';
 
-// Login is three steps: password -> authenticator code (first time: scan QR) -> signed in.
+// Login is two steps: email + password -> 6-digit code sent by email -> signed in.
+// The challenge token lives only in this component's state (never in storage); a reload starts over.
+
+// a***@example.com: first letter of the name part, then the domain.
+export const maskEmail = (email) => {
+  const [name, domain] = String(email).split('@');
+  return domain ? `${name.slice(0, 1)}***@${domain}` : email;
+};
+
+const EMAIL_FAILED = "We couldn't send the code. Please try again.";
+const msg = (e, fallback) => new Error(e?.code === 'EMAIL_FAILED' ? EMAIL_FAILED : (e?.message || fallback));
+const plural = (n, word, many = `${word}s`) => `${n} ${n === 1 ? word : many}`;
+
 export default function Login() {
   const { signIn } = useAuth();
-  const [step, setStep] = useState('password');     // password | totp_setup | totp_verify
-  const [stepToken, setStepToken] = useState(null);
-  const [setup, setSetup] = useState(null);          // { secret, qrDataUrl }
+  const [step, setStep] = useState('password');     // password | code
+  const [challenge, setChallenge] = useState(null);  // { token, email }
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [code, setCode] = useState('');
-  const { busy, error, run, setError } = useAction();
+  const [resendIn, setResendIn] = useState(0);       // seconds until "Resend code" is allowed
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
+  const [notice, setNotice] = useState('');
+  const inFlight = useRef(false);
+  const codeRef = useRef(null);
 
-  const reset = () => { setStep('password'); setStepToken(null); setSetup(null); setCode(''); setPassword(''); setError(null); };
+  useEffect(() => {
+    if (resendIn <= 0) return undefined;
+    const t = setTimeout(() => setResendIn((s) => Math.max(0, s - 1)), 1000);
+    return () => clearTimeout(t);
+  }, [resendIn]);
 
-  const submitPassword = (e) => { e.preventDefault(); run(async () => {
-    const r = await adminApi.login(email.trim(), password);
-    setStepToken(r.stepToken); setStep(r.step);
-    if (r.step === 'totp_setup') setSetup(await adminApi.totpSetup(r.stepToken));
+  // Back to step 1, optionally explaining why (too many tries, expired login, resend limit).
+  const startOver = (why) => {
+    setStep('password'); setChallenge(null); setCode(''); setPassword(''); setResendIn(0); setNotice('');
+    setError(why ? new Error(why) : null);
+  };
+
+  const guard = async (fn) => {
+    if (inFlight.current) return;
+    inFlight.current = true; setBusy(true);
+    try { await fn(); } finally { inFlight.current = false; setBusy(false); }
+  };
+
+  const submitPassword = (e) => { e.preventDefault(); setError(null); guard(async () => {
+    try {
+      const r = await adminApi.login(email.trim(), password);
+      setChallenge({ token: r.challengeToken, email: email.trim() });
+      setResendIn(r.resendAfterSeconds ?? 60); setCode(''); setNotice(''); setStep('code');
+    } catch (err) { setError(msg(err, 'Sign in failed.')); }
   }); };
 
-  const submitCode = (e) => { e.preventDefault(); run(async () => {
-    const r = step === 'totp_setup' ? await adminApi.totpEnable(stepToken, code) : await adminApi.totpVerify(stepToken, code);
-    signIn(r.token, r.admin);
+  const verify = (value) => { setError(null); setNotice(''); guard(async () => {
+    try {
+      const r = await adminApi.verifyOtp(challenge.token, value);
+      signIn(r.token, r.admin);
+    } catch (err) {
+      setCode('');
+      switch (err.code) {
+        case 'OTP_INVALID': {
+          const left = err.details?.attemptsLeft;
+          setError(new Error(`That code is not right.${typeof left === 'number' ? ` ${plural(left, 'try', 'tries')} left.` : ''}`));
+          codeRef.current?.focus();
+          break;
+        }
+        case 'OTP_EXPIRED': setError(new Error('This code has expired. Request a new code or start over.')); break;
+        case 'OTP_LOCKED': case 'ADMIN_LOCKED': startOver('Too many wrong codes. Please log in again.'); break;
+        case 'CHALLENGE_INVALID': startOver('This login has expired. Please log in again.'); break;
+        default: setError(msg(err, 'Could not check the code.'));
+      }
+    }
   }); };
+
+  const resend = () => { setError(null); setNotice(''); guard(async () => {
+    try {
+      const r = await adminApi.resendOtp(challenge.token);
+      setCode(''); setResendIn(r.resendAfterSeconds ?? 60);
+      setNotice(`We sent a new code.${typeof r.resendsLeft === 'number' ? ` ${plural(r.resendsLeft, 'resend')} left.` : ''}`);
+      codeRef.current?.focus();
+    } catch (err) {
+      switch (err.code) {
+        case 'RESEND_TOO_SOON': {
+          const wait = err.details?.retryAfterSeconds ?? 60;
+          setResendIn(wait); setError(new Error(`Please wait ${plural(wait, 'second')} before asking for a new code.`));
+          break;
+        }
+        case 'RESEND_LIMIT': startOver('Too many new codes for this login. Please log in again.'); break;
+        case 'CHALLENGE_INVALID': startOver('This login has expired. Please log in again.'); break;
+        default: setError(msg(err, 'Could not send a new code.'));
+      }
+    }
+  }); };
+
+  // Digits only, max 6; a pasted "123 456" works too. The 6th digit submits on its own.
+  const onCode = (e) => {
+    const v = e.target.value.replace(/\D/g, '').slice(0, 6);
+    setCode(v);
+    if (v.length === 6) verify(v);
+  };
+  const submitCode = (e) => { e.preventDefault(); if (code.length === 6) verify(code); };
 
   return (
     <div className="auth">
@@ -46,20 +124,17 @@ export default function Login() {
           </>
         ) : (
           <>
-            <h2>{step === 'totp_setup' ? 'Set up two-factor' : 'Two-factor check'}</h2>
-            <p className="muted">Step 2 of 2 · {step === 'totp_setup' ? 'Scan the QR code, then enter the 6-digit code.' : 'Enter the 6-digit code from your authenticator app.'}</p>
+            <h2>Check your email</h2>
+            <p className="muted">Step 2 of 2 · We sent a 6-digit code to <strong>{maskEmail(challenge.email)}</strong>. It expires in 10 minutes.</p>
             <form onSubmit={submitCode}>
-              {step === 'totp_setup' && setup && (
-                <div className="qr">
-                  <p className="muted">Scan with Google Authenticator, Microsoft Authenticator or Authy.</p>
-                  <img src={setup.qrDataUrl} alt="Authenticator QR code" width="180" height="180" />
-                  <p className="muted">Can't scan? Enter this key manually:<br /><code>{setup.secret}</code></p>
-                </div>
-              )}
-              <label>Code<input className="code-input" value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))} inputMode="numeric" autoComplete="one-time-code" placeholder="••••••" autoFocus required /></label>
+              <label>Code<input ref={codeRef} className="code-input" value={code} onChange={onCode} inputMode="numeric" pattern="[0-9]*" autoComplete="one-time-code" placeholder="••••••" maxLength={12} autoFocus required /></label>
               <Err error={error} />
+              {notice && <p className="muted" role="status">{notice}</p>}
               <button disabled={busy || code.length !== 6}>{busy ? 'Checking…' : 'Log in'}</button>
-              <button type="button" className="link" onClick={reset}>Start over</button>
+              <button type="button" className="link" onClick={resend} disabled={busy || resendIn > 0}>
+                {resendIn > 0 ? `Resend code in ${resendIn}s` : 'Resend code'}
+              </button>
+              <button type="button" className="link" onClick={() => startOver()}>Start over</button>
             </form>
           </>
         )}

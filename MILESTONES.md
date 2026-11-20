@@ -1,8 +1,8 @@
 # Milestone checklist — admin panel
 ## M1
 - [x] Project setup (Vite + React + router), API client with token handling
-- [x] Login: password -> 2FA setup (QR) / 2FA code -> session
-- [x] Admin management (Full Admin): list, create, role, deactivate, reset 2FA/password
+- [x] Login: password -> 6-digit code sent by email (resend with 60s countdown) -> session (authenticator app removed 20 Nov 2026)
+- [x] Admin management (Full Admin): list, create, role, deactivate, reset password
 - [x] User search, user detail, age-group override with reason
 - [x] Blocked-words list (Full Admin + Content Editor)
 - [x] Audit log viewer with filters

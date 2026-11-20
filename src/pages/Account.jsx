@@ -28,7 +28,6 @@ export default function Account() {
             <div className="cell-sub">{admin.email}</div>
             <div className="row" style={{ marginTop: 6, gap: 6 }}>
               <span className={`pill ${full ? 'brand' : 'muted'}`}>{full ? 'Full Admin' : 'Content Editor'}</span>
-              <span className="pill ok"><Icon name="shield" size={12} />Two-factor on</span>
             </div>
           </div>
         </div>

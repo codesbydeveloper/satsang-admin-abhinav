@@ -20,7 +20,7 @@
 - **Age groups:** Shishu 0–4; Bals/Balikas A 5–7, B 8–9, C 10–12; Kishors/Kishoris A 13–15, B 16–18; Yuvak/Yuvatis A 19–35; Yuvaks/Yuvatis B 36–55; Vadil 56+. DOB is private; only the username is public.
 - **Server is authoritative:** Sparks, purchases, streaks, spin, referrals, leaderboards. Game day = America/New_York (DST-aware); Daily Spin = rolling 24 h. The app must work offline (questions/answers cached encrypted, scores re-verified on sync, unique transaction IDs).
 - **Privacy/COPPA/store compliance** is built in from the start; privacy-policy and consent wording come from Loyadham's counsel. Account deletion must be possible in-app and via an external web page.
-- **Admin Panel:** roles Full Admin and Content Editor, TOTP 2FA, audit log.
+- **Admin Panel:** roles Full Admin and Content Editor, email-code login, audit log.
 - **Avatars:** 16 fixed (10 animal, 6 human). "Customize Profile Avatar" is Coming Soon (never "Mascot").
 - **No hidden access:** no undisclosed admin accounts, backdoors, hard-coded credentials or tracking.
 - Any paid dependency is included in the $5,000, except the Block Blast Toolkit ($24.99, reimbursed).
@@ -34,6 +34,6 @@ Payments release only on approval of each milestone (see contract 11.1).
 
 ## This repo: satsang-spark-admin
 - React (Vite), talks only to the backend REST API (`/api/v1/admin/*`; spec at the backend's `/api-docs.json`).
-- Login is three steps: password -> authenticator code (or first-time QR setup) -> admin token. Step tokens only work on the 2FA calls.
+- Login is two steps: password -> 6-digit code sent by email (`/admin/auth/verify-otp`, `/resend-otp`) -> admin token. The challenge token is kept in memory only.
 - Roles: Full Admin sees everything; Content Editor sees content and the blocked-words list only (hide menus the role cannot use, and still handle 403s).
-- M1 screens: login + 2FA, admin management, user search + age-group override, blocked words, audit log. Content sections arrive with M2/M3.
+- M1 screens: login + email code, admin management, user search + age-group override, blocked words, audit log. Content sections arrive with M2/M3.

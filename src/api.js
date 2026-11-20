@@ -39,17 +39,16 @@ export async function api(path, { method = 'GET', body, token, params } = {}) {
 }
 
 export const adminApi = {
-  login: (email, password) => api('/admin/auth/login', { method: 'POST', body: { email, password } }),
-  totpSetup: (stepToken) => api('/admin/auth/totp/setup', { method: 'POST', token: stepToken }),
-  totpEnable: (stepToken, code) => api('/admin/auth/totp/enable', { method: 'POST', token: stepToken, body: { code } }),
-  totpVerify: (stepToken, code) => api('/admin/auth/totp/verify', { method: 'POST', token: stepToken, body: { code } }),
+  login: (email, password) => api('/admin/auth/login', { method: 'POST', token: '', body: { email, password } }),
+  // Step 2: the 6-digit code emailed after a correct password. token: '' so no admin token is ever sent with it.
+  verifyOtp: (challengeToken, code) => api('/admin/auth/verify-otp', { method: 'POST', token: '', body: { challengeToken, code } }),
+  resendOtp: (challengeToken) => api('/admin/auth/resend-otp', { method: 'POST', token: '', body: { challengeToken } }),
   me: () => api('/admin/auth/me'),
   logout: () => api('/admin/auth/logout', { method: 'POST' }),
   changePassword: (currentPassword, newPassword) => api('/admin/auth/change-password', { method: 'POST', body: { currentPassword, newPassword } }),
   admins: () => api('/admin/admins'),
   createAdmin: (b) => api('/admin/admins', { method: 'POST', body: b }),
   updateAdmin: (id, b) => api(`/admin/admins/${id}`, { method: 'PATCH', body: b }),
-  resetAdmin2fa: (id) => api(`/admin/admins/${id}/reset-2fa`, { method: 'POST' }),
   resetAdminPassword: (id, newPassword) => api(`/admin/admins/${id}/reset-password`, { method: 'POST', body: { newPassword } }),
   users: (params) => api('/admin/users', { params }),
   user: (id) => api(`/admin/users/${id}`),

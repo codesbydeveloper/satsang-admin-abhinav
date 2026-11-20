@@ -1,6 +1,6 @@
 # Satsang Spark — Admin Panel (Milestone 1)
 
-React (Vite) panel for the Satsang Spark backend: admin login with authenticator-app 2FA, admin management, user search with age-group override, blocked words, and the audit log. Full Admin sees everything; Content Editor sees blocked words only.
+React (Vite) panel for the Satsang Spark backend: admin login with a 6-digit code sent by email, admin management, user search with age-group override, blocked words, and the audit log. Full Admin sees everything; Content Editor sees blocked words only.
 
 ## Run
 ```bash
