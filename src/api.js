@@ -57,6 +57,8 @@ export const adminApi = {
   resetAdminPassword: (id, newPassword) => api(`/admin/admins/${id}/reset-password`, { method: 'POST', body: { newPassword } }),
   users: (params) => api('/admin/users', { params }),
   user: (id) => api(`/admin/users/${id}`),
+  // Loyadham Online Classes: action 'verify' | 'reject' | 'confirm_interest' | 'reset' (Full Admin; audited).
+  studentStatusAction: (profileId, action) => api(`/admin/profiles/${profileId}/student-status`, { method: 'POST', body: { action } }),
   setAgeGroup: (profileId, ageGroup, reason) => api(`/admin/users/profiles/${profileId}/age-group`, { method: 'PATCH', body: { ageGroup, reason } }),
   words: () => api('/admin/blocked-words'),
   addWord: (word, kind) => api('/admin/blocked-words', { method: 'POST', body: { word, kind } }),

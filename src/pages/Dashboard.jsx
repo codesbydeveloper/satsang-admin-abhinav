@@ -6,6 +6,7 @@ import { useAuth } from '../auth';
 import { BarList, Donut, LineChart } from '../components/charts';
 import { fmt, timeAgo, useAction } from '../components/ui';
 import { Icon } from '../components/icons';
+import { TO_VERIFY } from '../studentStatus';
 
 const TYPE_LABEL = { adult: 'Adult', parent: 'Parent', child: 'Child profile' };
 const MODE_LABEL = { sanatan: 'Sanatan', satsang: 'Satsang', not_set: 'Not chosen yet' };
@@ -55,6 +56,9 @@ function SummaryCards({ s, timeZone }) {
   // Deletion requests with status pending (web requests waiting for a Full Admin); an older backend sends none.
   const pending = s.pendingDeletions;
   const hasPending = typeof pending === 'number';
+  // Loyadham Online Classes: profiles pending_verification + interested (an older backend sends none).
+  const students = s.studentsToVerify;
+  const hasStudents = typeof students === 'number';
   return (
     <div className="stats">
       {card('total', 'Total accounts', s.accounts, { to: '/users' })}
@@ -65,6 +69,14 @@ function SummaryCards({ s, timeZone }) {
       {card('deletions', 'Pending deletion requests', hasPending ? pending : '—', {
         to: '/deletion-requests?status=pending', warn: hasPending && pending > 0,
         hint: !hasPending ? 'Not available' : pending > 0 ? '⚠ Needs review' : 'All clear',
+      })}
+      {card('students', 'Students to verify', hasStudents ? students : '—', {
+        to: `/users?studentStatus=${TO_VERIFY}`, warn: hasStudents && students > 0,
+        title: 'Loyadham Online Classes: enrolments to verify + interests to confirm',
+        hint: !hasStudents ? 'Not available'
+          : typeof s.studentsPendingVerification === 'number' && students > 0
+            ? `${s.studentsPendingVerification} pending · ${s.studentsInterested} interested`
+            : students > 0 ? '⚠ Needs review' : 'All clear',
       })}
     </div>
   );
@@ -157,7 +169,7 @@ function QuickActions({ isFull }) {
 function Skeleton() {
   return (
     <div aria-busy="true" aria-label="Loading dashboard">
-      <div className="stats">{Array.from({ length: 6 }, (_, i) => <div key={i} className="stat skeleton" style={{ height: 96 }} />)}</div>
+      <div className="stats">{Array.from({ length: 7 },(_, i) => <div key={i} className="stat skeleton" style={{ height: 96 }} />)}</div>
       <div className="dash-grid">
         <div className="panel skeleton" style={{ height: 320 }} />
         <div className="panel skeleton" style={{ height: 320 }} />

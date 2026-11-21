@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { adminApi } from '../api';
 import { AGE_GROUPS, ageGroupLabel } from '../ageGroups';
-import { Err, fmt, fmtDate, Modal, TypePill, useAction, YesNo } from '../components/ui';
+import { useAuth } from '../auth';
+import { Err, fmt, fmtDate, Modal, TypePill, useAction, useToast, YesNo } from '../components/ui';
+import { SPARKS_NOTE, STUDENT_SPARKS, STUDENT_STATUS, StudentChip } from '../studentStatus';
 import { Icon } from '../components/icons';
 import { initials } from '../components/Layout';
 
@@ -37,6 +39,77 @@ function AgeGroupEditor({ profile, onSaved }) {
         <Err error={error} />
       </div>
     </form>
+  );
+}
+
+// Loyadham Online Classes: the admin actions each status allows (backend: utils/studentStatus.js TRANSITIONS).
+const STUDENT_ACTIONS = {
+  verify: {
+    label: `Verify student (+${STUDENT_SPARKS.verified} Sparks)`, title: 'Verify this student?', confirm: 'Verify student',
+    body: (u) => <>Confirm that <b className="gu">{u}</b> is enrolled in Loyadham Online Classes. {STUDENT_SPARKS.verified} Sparks are reserved for this profile (given once only).</>,
+    done: (u, n) => `${u} verified as a student${n ? ` · +${n} Sparks reserved` : ' · no new Sparks (already given before)'}`,
+  },
+  reject: {
+    label: 'Reject', title: 'Reject this enrolment?', confirm: 'Reject', secondary: true,
+    body: (u) => <>The status of <b className="gu">{u}</b> becomes “Not enrolled”. No Sparks are given; the user can answer again in the app.</>,
+    done: (u) => `${u}: enrolment rejected`,
+  },
+  confirm_interest: {
+    label: `Confirm interest (+${STUDENT_SPARKS.interestConfirmed} Sparks)`, title: 'Confirm this interest?', confirm: 'Confirm interest',
+    body: (u) => <>Confirm that <b className="gu">{u}</b> is interested in joining Loyadham Online Classes. {STUDENT_SPARKS.interestConfirmed} Sparks are reserved for this profile (given once only).</>,
+    done: (u, n) => `${u}: interest confirmed${n ? ` · +${n} Sparks reserved` : ' · no new Sparks (already given before)'}`,
+  },
+  reset: {
+    label: 'Reset', title: 'Reset the student status?', confirm: 'Reset', secondary: true,
+    body: (u) => <>The status of <b className="gu">{u}</b> goes back to “Not answered”, and the app asks the question again. <b>Sparks already given are not taken back.</b></>,
+    done: (u) => `${u}: student status reset`,
+  },
+};
+const actionsFor = (status) => (
+  status === 'pending_verification' ? ['verify', 'reject']
+    : status === 'interested' ? ['confirm_interest']
+      : status && status !== 'not_asked' && STUDENT_STATUS[status] ? ['reset'] : []);
+
+function StudentConfirm({ profile, action, onClose, onDone }) {
+  const a = STUDENT_ACTIONS[action];
+  const { busy, error, run } = useAction();
+  const go = () => run(async () => { const r = await adminApi.studentStatusAction(profile.id, action); onDone(a.done(profile.username, r.sparksAwarded)); });
+  return (
+    <Modal title={a.title} onClose={onClose}>
+      <p>{a.body(profile.username)}</p>
+      <p className="muted">Recorded in the audit log.</p>
+      <Err error={error} />
+      <div className="modal-foot">
+        <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
+        <button type="button" onClick={go} disabled={busy}>{busy && <span className="spinner" aria-hidden="true" />}{busy ? 'Saving…' : a.confirm}</button>
+      </div>
+    </Modal>
+  );
+}
+
+function StudentSection({ profile: p, canAct, onAction }) {
+  const actions = canAct ? actionsFor(p.studentStatus) : [];
+  const confirmedBy = p.studentStatus === 'interest_confirmed' ? 'Confirmed by' : 'Verified by';
+  return (
+    <div className="student" role="group" aria-label={`Loyadham Online Classes for ${p.username}`}>
+      <div className="student-head"><h5>Loyadham Online Classes</h5><StudentChip status={p.studentStatus || 'not_asked'} /></div>
+      <dl className="facts">
+        {p.studentVerifiedAt && <div><dt>{confirmedBy}</dt><dd>{p.studentVerifiedByName || (p.studentVerifiedBy ? `Admin #${p.studentVerifiedBy}` : '—')}</dd></div>}
+        {p.studentVerifiedAt && <div><dt>{confirmedBy === 'Verified by' ? 'Verified on' : 'Confirmed on'}</dt><dd title={fmt(p.studentVerifiedAt)}>{fmtDate(p.studentVerifiedAt)}</dd></div>}
+        <div><dt>Sparks reserved</dt><dd>{(p.studentSparksAwarded ?? 0).toLocaleString()}</dd></div>
+        {p.studentStatusUpdatedAt && <div><dt>Last change</dt><dd title={fmt(p.studentStatusUpdatedAt)}>{fmtDate(p.studentStatusUpdatedAt)}</dd></div>}
+      </dl>
+      <p className="sparks-note">{SPARKS_NOTE}</p>
+      {actions.length > 0 && (
+        <div className="student-actions">
+          {actions.map((k) => (
+            <button key={k} type="button" className={`btn-sm${STUDENT_ACTIONS[k].secondary ? ' btn-secondary' : ''}`} onClick={() => onAction(p, k)}
+              aria-label={`${STUDENT_ACTIONS[k].label} for ${p.username}`}>{STUDENT_ACTIONS[k].label}</button>
+          ))}
+        </div>
+      )}
+      {actions.includes('reset') && <span className="hint">Reset: Sparks already given are not taken back.</span>}
+    </div>
   );
 }
 
@@ -104,7 +177,9 @@ export default function UserDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [data, setData] = useState(null);
-  const [dialog, setDialog] = useState(null);   // { kind: 'rename' | 'deleteProfile' | 'deleteAccount', profile? }
+  const [dialog, setDialog] = useState(null);   // { kind: 'rename' | 'deleteProfile' | 'deleteAccount' | 'student', profile?, action? }
+  const { isFull } = useAuth();   // student-status actions: Full Admin only (the backend answers 403 otherwise)
+  const toast = useToast();
   const { error, run } = useAction();
   const load = () => run(async () => setData(await adminApi.user(id)));
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [id]);
@@ -177,6 +252,7 @@ export default function UserDetail() {
               <div><dt>Mode</dt><dd>{MODE[p.mode] || <span className="muted">Not chosen</span>}</dd></div>
               <div><dt>Language</dt><dd className="gu">{LANG[p.language] || p.language}</dd></div>
             </dl>
+            <StudentSection profile={p} canAct={isFull} onAction={(profile, action) => setDialog({ kind: 'student', profile, action })} />
             <AgeGroupEditor profile={p} onSaved={load} />
             {p.isChild && (
               <div className="card-foot">
@@ -190,6 +266,10 @@ export default function UserDetail() {
       </div>
       <p className="info-note"><Icon name="shield" size={15} />Opening this page is recorded in the audit log. Passwords and Parent PINs are never shown.</p>
 
+      {dialog?.kind === 'student' && (
+        <StudentConfirm profile={dialog.profile} action={dialog.action} onClose={close} onDone={(msg) => { done(); toast.show(msg); }} />
+      )}
+      {toast.element}
       {dialog?.kind === 'rename' && <RenameDialog profile={dialog.profile} onClose={close} onDone={done} />}
       {dialog?.kind === 'deleteProfile' && (
         <DeleteDialog title="Delete child profile?" confirmWord={dialog.profile.username} actionLabel="Delete profile" onClose={close}

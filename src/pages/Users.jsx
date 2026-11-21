@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { adminApi } from '../api';
 import { createUser } from '../api/users';
 import { useAuth } from '../auth';
 import { ageGroupLabel } from '../ageGroups';
+import { isStudentFilter, STUDENT_FILTERS, StudentChip } from '../studentStatus';
 import { EmptyRow, Err, fmt, fmtDate, isEmail, Modal, PageHead, Pager, RefreshButton, TypePill, useAction, useOnTabReturn, useToast, YesNo } from '../components/ui';
 import { Icon } from '../components/icons';
 import { initials } from '../components/Layout';
@@ -17,14 +18,28 @@ export default function Users() {
   const { busy, error, run } = useAction();
   const toast = useToast();
   const notice = useLocation().state?.notice;   // e.g. set by the user page after a delete
+  // Online Classes filter lives in the URL (?studentStatus=…) so the dashboard card can link straight to it.
+  const [params, setParams] = useSearchParams();
+  const raw = params.get('studentStatus') || '';
+  const status = isStudentFilter(raw) ? raw : '';
+  const setStatus = (v) => {
+    setPage(1);
+    setParams((p) => { const n = new URLSearchParams(p); if (v) n.set('studentStatus', v); else n.delete('studentStatus'); return n; }, { replace: true });
+  };
   const pageSize = 25;
 
-  useEffect(() => { run(async () => setData(await adminApi.users({ q: applied, page, pageSize }))); /* eslint-disable-next-line */ }, [applied, page, reload]);
-  const refresh = () => setReload((n) => n + 1);   // same search and page
+  useEffect(() => { run(async () => setData(await adminApi.users({ q: applied, studentStatus: status || undefined, page, pageSize }))); /* eslint-disable-next-line */ }, [applied, status, page, reload]);
+  const refresh = () => setReload((n) => n + 1);   // same search, filter and page
   useOnTabReturn(refresh);
 
   const pages = data ? Math.max(1, Math.ceil(data.totalAccounts / pageSize)) : 1;
-  const clear = () => { setQ(''); setPage(1); setApplied(''); };
+  const clear = () => { setQ(''); setPage(1); setApplied(''); if (status) setStatus(''); };
+  const filterLabel = STUDENT_FILTERS.find((f) => f.value === status)?.label;
+  // A parent's child profiles come as separate rows: count the pending ones (on this page) once per account.
+  const pendingKids = {};
+  data?.rows.forEach((r) => { if (r.isChild && r.studentStatus === 'pending_verification') pendingKids[r.accountId] = (pendingKids[r.accountId] || 0) + 1; });
+  const firstRowOf = {};
+  data?.rows.forEach((r, i) => { if (!(r.accountId in firstRowOf)) firstRowOf[r.accountId] = i; });
   return (
     <div className="page">
       <PageHead title="Users" subtitle="Every app account and its playable profiles. Open one to see details or correct an age group.">
@@ -38,17 +53,28 @@ export default function Users() {
             <input placeholder="Search username or email" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search username or email" />
           </div>
           <button disabled={busy}>Search</button>
+          <label className="inline">Online Classes
+            <select value={status} onChange={(e) => setStatus(e.target.value)} aria-label="Online Classes">
+              {STUDENT_FILTERS.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
+            </select>
+          </label>
           <RefreshButton loading={busy && !!data} onClick={refresh} />
-          {applied && <button type="button" className="btn-secondary" onClick={clear}>Clear</button>}
+          {(applied || status) && <button type="button" className="btn-secondary" onClick={clear}>Clear</button>}
         </form>
         {error && <div style={{ padding: '12px 20px 0' }}><Err error={error} /></div>}
         <div className="table-scroll">
           <table>
-            <thead><tr><th>User</th><th>Email</th><th>Type</th><th>Age group</th><th>Email status</th><th>Joined</th><th><span className="sr-only">Actions</span></th></tr></thead>
+            <thead><tr><th>User</th><th>Email</th><th>Type</th><th>Age group</th><th>Online Classes</th><th>Email status</th><th>Joined</th><th><span className="sr-only">Actions</span></th></tr></thead>
             <tbody>
-              {!data && !error && <EmptyRow cols={7} icon="users">Loading users…</EmptyRow>}
-              {data && data.rows.length === 0 && <EmptyRow cols={7}>{applied ? `No users match “${applied}”.` : 'No users yet.'}</EmptyRow>}
-              {data && data.rows.map((r) => {
+              {!data && !error && <EmptyRow cols={8} icon="users">Loading users…</EmptyRow>}
+              {data && data.rows.length === 0 && (
+                <EmptyRow cols={8}>
+                  {applied || status
+                    ? `No users match${applied ? ` “${applied}”` : ''}${status ? `${applied ? ' with' : ''} Online Classes: ${filterLabel}` : ''}.`
+                    : 'No users yet.'}
+                </EmptyRow>
+              )}
+              {data && data.rows.map((r, i) => {
                 const name = r.username || (r.accountType === 'parent' ? '(parent account)' : '—');
                 return (
                   <tr key={`${r.accountId}-${r.profileId ?? 'x'}`}>
@@ -58,9 +84,15 @@ export default function Users() {
                         <div><Link to={`/users/${r.accountId}`} className="cell-main gu">{name}</Link>{r.isChild && <span className="tag">child</span>}</div>
                       </div>
                     </td>
-                    <td className="cell-sub">{r.email}</td>
+                    <td className="cell-sub">
+                      {r.email}
+                      {r.accountType === 'parent' && firstRowOf[r.accountId] === i && pendingKids[r.accountId] > 0 && (
+                        <span className="tag warn-tag">{pendingKids[r.accountId]} {pendingKids[r.accountId] === 1 ? 'child' : 'children'} pending</span>
+                      )}
+                    </td>
                     <td><TypePill type={r.isChild ? 'child' : r.accountType} /></td>
                     <td>{ageGroupLabel(r.ageGroup) || <span className="muted">—</span>}{r.ageGroupOverridden && <span className="tag">override</span>}</td>
+                    <td>{r.profileId ? <StudentChip status={r.studentStatus} /> : <span className="muted">—</span>}</td>
                     <td><YesNo value={r.emailVerified} /></td>
                     <td title={fmt(r.createdAt)}>{fmtDate(r.createdAt)}</td>
                     <td className="actions"><Link className="btn-small" to={`/users/${r.accountId}`} aria-label={`View ${r.username || r.email}`}>View</Link></td>
