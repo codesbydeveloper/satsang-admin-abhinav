@@ -131,7 +131,7 @@ test('filters: Country (countries present), Age group, Account type, Class Statu
   await waitFor(() => expect(lastQuery()).not.toHaveProperty('country'));
   for (const k of Object.keys(want)) { expect(lastQuery()).not.toHaveProperty(k); expect(urlParams()).not.toHaveProperty(k); }
   expect(screen.getByLabelText('Search name, username or email')).toHaveValue('');
-  expect(screen.queryByRole('button', { name: 'Clear' })).toBeNull();
+  expect(screen.getByRole('button', { name: 'Clear' })).toBeDisabled();   // always visible, nothing left to clear
 });
 
 test('the URL restores filters, sort and page on load', async () => {
@@ -188,4 +188,25 @@ test('narrow screens: the table sits in a horizontal scroller; the toolbar wraps
   expect(screen.getByRole('table').parentElement).toHaveClass('table-scroll');
   expect(screen.getByRole('table')).toHaveClass('users-table');
   expect(screen.getByRole('button', { name: 'Search' }).closest('form')).toHaveClass('toolbar');
+});
+
+test('toolbar: search row, then four filters + Refresh + Clear; Clear is always visible and keeps the sort', async () => {
+  const user = userEvent.setup();
+  await mount('/users?sort=email&order=desc&page=3&country=IN');
+  const form = screen.getByRole('button', { name: 'Search' }).closest('form');
+  const rows = form.querySelectorAll(':scope > div');
+  expect(rows[0]).toHaveClass('ut-search');
+  expect(within(rows[0]).getByLabelText('Search name, username or email')).toBeInTheDocument();
+  expect(rows[1]).toHaveClass('ut-filters');
+  expect([...rows[1].querySelectorAll('.ut-field .ut-label')].map((l) => l.textContent)).toEqual(['Country', 'Age group', 'Account type', 'Class Status']);
+  const actions = rows[1].lastElementChild;
+  expect(actions).toHaveClass('ut-actions');
+  expect(within(actions).getByRole('button', { name: 'Refresh' })).toBeInTheDocument();
+  const clear = within(actions).getByRole('button', { name: 'Clear' });
+  expect(clear).toBeEnabled();
+  await user.click(clear);
+  await waitFor(() => expect(urlParams()).toEqual({ sort: 'email', order: 'desc' }));
+  expect(clear).toBeDisabled();
+  await user.type(screen.getByLabelText('Search name, username or email'), 'x');
+  expect(clear).toBeEnabled();   // typed text can be cleared too
 });

@@ -86,6 +86,8 @@ export default function Users() {
 
   const pages = data ? Math.max(1, Math.ceil(data.totalAccounts / pageSize)) : 1;
   const filtered = !!(applied || country || ageGroup || accountType || classStatus !== 'all' || studentStatus || joinedSince);
+  // Clear is always shown; it does something when a search/filter is on, text is typed, or we are past page 1.
+  const clearable = filtered || !!q.trim() || page > 1;
   const classValue = studentStatus === TO_VERIFY ? TO_VERIFY : classStatus;
   const classOptions = CLASS_STATUS_FILTERS.concat(studentStatus === TO_VERIFY ? [{ value: TO_VERIFY, label: 'To verify (pending + interested)' }] : []);
   const cols = SORT_COLUMNS.length + 1;
@@ -98,43 +100,55 @@ export default function Users() {
       </PageHead>
       {notice && <p className="notice success" role="status"><Icon name="check" size={16} />{notice}</p>}
       <div className="card flush">
+        {/* Row 1: search. Row 2: four equal filters, then Refresh + Clear (all 40px, bottom-aligned). */}
         <form className="toolbar users-toolbar" onSubmit={(e) => { e.preventDefault(); update({ q: q.trim() }); }}>
-          <div className="search">
-            <Icon name="search" size={16} />
-            <input placeholder="Search name, username or email" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search name, username or email" />
+          <div className="ut-search">
+            <div className="search">
+              <Icon name="search" size={16} />
+              <input placeholder="Search name, username or email" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search name, username or email" />
+            </div>
+            <button disabled={busy}>Search</button>
           </div>
-          <button disabled={busy}>Search</button>
-          <label className="inline">Country
-            <select value={country} onChange={(e) => update({ country: e.target.value })} aria-label="Country">
-              <option value="">All</option>
-              {countryOptions.map((c) => <option key={c} value={c}>{countryName(c)}</option>)}
-            </select>
-          </label>
-          <label className="inline">Age group
-            <select value={ageGroup} onChange={(e) => update({ ageGroup: e.target.value })} aria-label="Age group">
-              <option value="">All</option>
-              {AGE_GROUPS.map((g) => <option key={g.key} value={g.key}>{g.label}</option>)}
-            </select>
-          </label>
-          <label className="inline">Account type
-            <select value={accountType} onChange={(e) => update({ accountType: e.target.value })} aria-label="Account type">
-              {ACCOUNT_TYPES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-            </select>
-          </label>
-          <label className="inline">Class Status
-            <select value={classValue} onChange={(e) => setClass(e.target.value)} aria-label="Class Status">
-              {classOptions.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
-            </select>
-          </label>
-          {joinedSince && (
-            <span className="pill info filter-chip">Joined since {fmt(joinedSince)}
-              <button type="button" className="chip-x" aria-label="Remove the joined since filter" onClick={() => update({ joinedSince: null })}>×</button>
-            </span>
-          )}
-          <RefreshButton loading={busy && !!data} onClick={refresh} />
-          {filtered && <button type="button" className="btn-secondary" onClick={clear}>Clear</button>}
-          {filtered && typeof data?.totalRows === 'number' && (
-            <span className="muted match-count" role="status">{data.totalRows.toLocaleString()} matching {data.totalRows === 1 ? 'row' : 'rows'}</span>
+          <div className="ut-filters">
+            <label className="ut-field"><span className="ut-label">Country</span>
+              <select value={country} onChange={(e) => update({ country: e.target.value })} aria-label="Country">
+                <option value="">All</option>
+                {countryOptions.map((c) => <option key={c} value={c}>{countryName(c)}</option>)}
+              </select>
+            </label>
+            <label className="ut-field"><span className="ut-label">Age group</span>
+              <select value={ageGroup} onChange={(e) => update({ ageGroup: e.target.value })} aria-label="Age group">
+                <option value="">All</option>
+                {AGE_GROUPS.map((g) => <option key={g.key} value={g.key}>{g.label}</option>)}
+              </select>
+            </label>
+            <label className="ut-field"><span className="ut-label">Account type</span>
+              <select value={accountType} onChange={(e) => update({ accountType: e.target.value })} aria-label="Account type">
+                {ACCOUNT_TYPES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+              </select>
+            </label>
+            <label className="ut-field"><span className="ut-label">Class Status</span>
+              <select value={classValue} onChange={(e) => setClass(e.target.value)} aria-label="Class Status">
+                {classOptions.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
+              </select>
+            </label>
+            <div className="ut-actions">
+              <RefreshButton loading={busy && !!data} onClick={refresh} />
+              <button type="button" className="btn-secondary" onClick={clear} disabled={!clearable}
+                title="Clear the search and filters (keeps the sort)">Clear</button>
+            </div>
+          </div>
+          {(joinedSince || (filtered && typeof data?.totalRows === 'number')) && (
+            <div className="ut-status">
+              {joinedSince && (
+                <span className="pill info filter-chip">Joined since {fmt(joinedSince)}
+                  <button type="button" className="chip-x" aria-label="Remove the joined since filter" onClick={() => update({ joinedSince: null })}>×</button>
+                </span>
+              )}
+              {filtered && typeof data?.totalRows === 'number' && (
+                <span className="muted match-count" role="status">{data.totalRows.toLocaleString()} matching {data.totalRows === 1 ? 'row' : 'rows'}</span>
+              )}
+            </div>
           )}
         </form>
         {error && <div style={{ padding: '12px 20px 0' }}><Err error={error} /></div>}
