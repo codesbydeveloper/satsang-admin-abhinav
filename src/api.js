@@ -135,7 +135,7 @@ export const adminApi = {
   resetAdminPassword: (id, newPassword) => api(`/admin/admins/${id}/reset-password`, { method: 'POST', body: { newPassword } }),
   users: (params) => api('/admin/users', { params }),
   user: (id) => api(`/admin/users/${id}`),
-  // Loyadham Online Classes: action 'verify' | 'reject' | 'confirm_interest' | 'reset' (Full Admin; audited).
+  // Loyadham Online Satsang Classes: action 'verify' | 'reject' | 'confirm_interest' | 'reset' (Full Admin; audited).
   studentStatusAction: (profileId, action) => api(`/admin/profiles/${profileId}/student-status`, { method: 'POST', body: { action } }),
   setAgeGroup: (profileId, ageGroup, reason) => api(`/admin/users/profiles/${profileId}/age-group`, { method: 'PATCH', body: { ageGroup, reason } }),
   words: () => api('/admin/blocked-words'),
@@ -150,12 +150,14 @@ export const adminApi = {
   referralSettings: () => api('/admin/referrals/settings'),
   saveReferralSettings: (settings) => api('/admin/referrals/settings', { method: 'PUT', body: settings }),
   referrals: (params) => api('/admin/referrals', { params }),
+  // For a parent: deletes the parent account and every child profile (the parent is emailed; email kept 30 days).
   deleteUserAccount: (accountId, reason) => api(`/admin/users/${accountId}`, { method: 'DELETE', body: { confirm: true, reason } }),
-  // NOT CONNECTED YET: the screens are designed, the backend endpoints don't exist. Suggested routes:
+  // Deletes ONE child profile and only its own data; the parent and other children are untouched (audited child.deleted).
+  // 200 { deleted, profileId, parentAccountId, sessionsEnded }; 409 NOT_A_CHILD_PROFILE for an adult's own profile.
+  deleteProfile: (profileId, reason) => api(`/admin/users/profiles/${profileId}`, { method: 'DELETE', body: { confirm: true, reason } }),
+  // NOT CONNECTED YET: the screen is designed, the backend endpoint doesn't exist. Suggested route:
   //   renameProfile: PATCH  /admin/users/profiles/:id/username { username, reason }
-  //   deleteProfile: DELETE /admin/users/profiles/:id          { confirm: true, reason }   (child profiles)
   renameProfile: (_profileId, _username, _reason) => notConnected(),
-  deleteProfile: (_profileId, _reason) => notConnected(),
 };
 
 const notConnected = () => Promise.reject(new ApiError(501, 'NOT_CONNECTED', 'This action is designed but not connected to the server yet. Nothing was changed.'));

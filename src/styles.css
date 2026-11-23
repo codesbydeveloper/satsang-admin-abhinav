@@ -167,6 +167,7 @@ dl.facts dd { margin:0; font-weight:500; }
 .modal .notice { margin:4px 0 16px; }
 .notice.danger { border-left-color:var(--err); background:var(--err-soft); }
 .notice.success { border-left-color:var(--ok); background:var(--ok-soft); }
+.notice.info { border-left-color:var(--brand); background:var(--brand-soft); }
 .current-name { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:10px 14px; border:1px solid var(--line); border-radius:var(--radius-sm); background:var(--surface-2); margin:6px 0 16px; }
 @keyframes fade { from { opacity:0; } }
 @keyframes pop { from { opacity:0; transform:translateY(6px) scale(.98); } }
@@ -387,3 +388,6 @@ th[aria-sort="ascending"] .th-sort, th[aria-sort="descending"] .th-sort { color:
 .parent-label { font-style:italic; }
 .filter-chip { gap:6px; } .chip-x { all:unset; cursor:pointer; font-size:14px; line-height:1; padding:0 2px; } .chip-x:focus-visible { outline:2px solid var(--brand); border-radius:3px; }
 .match-count { font-size:12.5px; margin-left:auto; }
+
+/* Delete parent account dialog: the child usernames that go with it */
+.delete-kids b { word-break:break-word; }

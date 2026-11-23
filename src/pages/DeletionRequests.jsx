@@ -5,7 +5,7 @@ import { approveRequest, getRequestById, getRequests, PAGE_SIZE, publishPendingC
 import { Drawer, EmptyRow, fmt, fmtDate, Modal, PageHead, Pager, RefreshButton, toDate, TypePill, timeAgo, useOnTabReturn, useToast } from '../components/ui';
 import { Icon } from '../components/icons';
 
-const SOURCE = { app: 'In the app', web: 'Web page' };
+const SOURCE = { app: 'In the app', web: 'Web page', admin: 'Admin Panel' };
 const STATUS = { pending: ['Pending', 'warn'], completed: ['Completed', 'ok'], rejected: ['Rejected', 'err'] };
 const TABS = [['pending', 'Pending'], ['completed', 'Completed'], ['rejected', 'Rejected'], ['all', 'All']];
 const NOT_VERIFIED = 'Email not verified yet';
@@ -14,8 +14,21 @@ const COLS = 8;
 // 401 is handled by the api client (logs out to the login screen).
 const ERRORS = { 403: "You don't have permission", 404: 'Request not found', 409: 'This request was already handled' };
 export const errorText = (e) => ERRORS[e?.status] || e?.message || 'Something went wrong';
-// Parent accounts have no profile of their own, and completed requests no longer have the account.
-export const displayName = (r) => r.username || `(${r.accountType === 'parent' ? 'parent' : 'adult'} account)`;
+const isChildEntry = (r) => r.target === 'child_profile';
+const retainedUntil = (r) => (r.status === 'completed' ? r.emailRetainedUntil : null);
+/**
+ * A completed entry whose retention period is over (or that kept nothing): the backend no longer sends the username
+ * or the email, so the panel shows "Details removed" and the request id.
+ */
+export const detailsRemoved = (r) => r.status === 'completed' && !r.username && !r.email;
+// Parent accounts have no profile of their own; a deleted child keeps its username for the retention period.
+export const displayName = (r) => {
+  if (r.username) return r.username;
+  if (detailsRemoved(r)) return 'Details removed';
+  if (isChildEntry(r)) return '(child profile)';
+  return `(${r.accountType === 'parent' ? 'parent' : 'adult'} account)`;
+};
+const typeOf = (r) => (isChildEntry(r) ? 'child' : r.accountType);
 
 const StatusPill = ({ status }) => { const [label, tone] = STATUS[status] || [status, 'muted']; return <span className={`pill ${tone}`}>{label}</span>; };
 const Verified = ({ value }) => (value == null ? <span className="muted">—</span> : (
@@ -25,18 +38,44 @@ const Verified = ({ value }) => (value == null ? <span className="muted">—</sp
 ));
 const childrenText = (n) => `${n} child profile${n === 1 ? '' : 's'}`;
 
-// Completed rows keep the deleted account's email (Full Admin only) until emailRetainedUntil, then the purge erases it.
+// Completed rows keep the deleted account's email and username (Full Admin only) until emailRetainedUntil, then the
+// purge erases them. A deleted child has no email of its own: the parent's is kept ("Parent email").
 export function EmailFact({ r, now = Date.now() }) {
-  const until = r.status === 'completed' ? r.emailRetainedUntil : null;
+  const until = retainedUntil(r);
   if (r.email) return (
     <>
       {r.email}
+      {isChildEntry(r) && <span className="email-label">Parent email</span>}
       {until && <div className="cell-sub" title={fmt(until)}>Kept until {fmtDate(until)} – then erased automatically for privacy.</div>}
     </>
   );
   if (r.status !== 'completed') return <span className="muted">—</span>;
   const erased = until && toDate(until).getTime() <= now;
-  return <span className="muted">{erased ? '— (erased)' : '— (account deleted)'}</span>;
+  return <span className="muted">{erased ? 'Details removed' : '— (account deleted)'}</span>;
+}
+
+// Completed tab, Username column: the retained username, or "Details removed" + the request id after the period.
+function CompletedName({ r }) {
+  if (detailsRemoved(r)) return <><span className="muted">Details removed</span><div className="cell-sub">Request #{r.id}</div></>;
+  return (
+    <>
+      {r.username ? <span className="cell-main gu">{r.username}</span>
+        : <span className="muted parent-label">{r.accountType === 'parent' && !isChildEntry(r) ? 'Parent account' : 'No username kept'}</span>}
+      <div className="cell-sub">Request #{r.id}</div>
+    </>
+  );
+}
+function CompletedEmail({ r }) {
+  if (detailsRemoved(r)) return <span className="muted">—</span>;
+  if (!r.email) return <span className="muted">—</span>;
+  const until = retainedUntil(r);
+  return (
+    <>
+      {r.email}
+      {isChildEntry(r) && <span className="email-label">Parent email</span>}
+      {until && <div className="cell-sub" title={fmt(until)}>Kept until {fmtDate(until)}</div>}
+    </>
+  );
 }
 
 export default function DeletionRequests() {
@@ -104,6 +143,7 @@ export default function DeletionRequests() {
     </>
   );
 
+  const completedTab = status === 'completed';
   const counts = data?.counts;
   const pages = data ? Math.max(1, Math.ceil(data.total / PAGE_SIZE)) : 1;
   return (
@@ -122,32 +162,52 @@ export default function DeletionRequests() {
         <form className="toolbar" onSubmit={(e) => { e.preventDefault(); setPage(1); setQ(search.trim()); }}>
           <div className="search">
             <Icon name="search" size={16} />
-            <input type="search" aria-label="Search by username or email" placeholder="Search username or email" value={search} onChange={(e) => setSearch(e.target.value)} />
+            <input type="search" aria-label="Search by username or email" value={search} onChange={(e) => setSearch(e.target.value)}
+              placeholder={completedTab ? 'Search username, email or #ID' : 'Search username or email'} />
           </div>
           <button disabled={loading}>Search</button>
           <RefreshButton loading={refreshing} onClick={refresh} />
           <label className="inline">Source
             <select value={source} onChange={(e) => { setSource(e.target.value); setPage(1); }}>
-              <option value="all">All</option><option value="app">In the app</option><option value="web">Web page</option>
+              <option value="all">All</option><option value="app">In the app</option><option value="web">Web page</option><option value="admin">Admin Panel</option>
             </select>
           </label>
         </form>
         <div className="table-scroll">
           <table>
-            <thead><tr>
-              <th>Username</th><th>Account type</th><th>Child profiles</th><th>Requested from</th>
-              <th>Requested</th><th>Email verified</th><th>Status</th><th className="right">Actions</th>
-            </tr></thead>
+            <thead>{completedTab ? (
+              <tr>
+                <th>Username</th><th>Email</th><th>Account type</th><th>Child profiles</th>
+                <th>Deleted from</th><th>Deleted</th><th>Status</th><th className="right">Actions</th>
+              </tr>
+            ) : (
+              <tr>
+                <th>Username</th><th>Account type</th><th>Child profiles</th><th>Requested from</th>
+                <th>Requested</th><th>Email verified</th><th>Status</th><th className="right">Actions</th>
+              </tr>
+            )}</thead>
             <tbody aria-busy={loading || refreshing}>
               {loading && Array.from({ length: 5 }, (_, i) => (
                 <tr key={`s${i}`} className="skel-row" aria-hidden="true">{Array.from({ length: COLS }, (__, j) => <td key={j}><span className="skeleton skel-line" /></td>)}</tr>
               ))}
               {!loading && !data && failed && <EmptyRow cols={COLS} icon="alert">Could not load deletion requests. Try Refresh.</EmptyRow>}
               {!loading && data && data.rows.length === 0 && <EmptyRow cols={COLS} icon="trash">No deletion requests</EmptyRow>}
-              {!loading && data && data.rows.map((r) => (
+              {!loading && data && completedTab && data.rows.map((r) => (
+                <tr key={r.id} data-testid={`completed-${r.id}`}>
+                  <td><CompletedName r={r} /></td>
+                  <td><CompletedEmail r={r} /></td>
+                  <td><TypePill type={typeOf(r)} /></td>
+                  <td>{r.childProfiles ?? 0}</td>
+                  <td className="cell-sub">{SOURCE[r.source] || r.source}</td>
+                  <td title={fmt(r.decidedAt || r.requestedAt)}>{timeAgo(r.decidedAt || r.requestedAt)}</td>
+                  <td><StatusPill status={r.status} /></td>
+                  <td className="actions"><div className="row-actions">{actions(r)}</div></td>
+                </tr>
+              ))}
+              {!loading && data && !completedTab && data.rows.map((r) => (
                 <tr key={r.id}>
                   <td className={r.username ? 'cell-main gu' : 'cell-main muted'}>{displayName(r)}{r.email && <div className="cell-sub">{r.email}</div>}</td>
-                  <td><TypePill type={r.accountType} /></td>
+                  <td><TypePill type={typeOf(r)} /></td>
                   <td>{r.childProfiles ?? 0}</td>
                   <td className="cell-sub">{SOURCE[r.source] || r.source}</td>
                   <td title={fmt(r.requestedAt)}>{timeAgo(r.requestedAt)}</td>
@@ -186,8 +246,11 @@ function RequestDetails({ r, details }) {
         <StatusPill status={r.status} />
       </div>
       <dl className="facts single">
-        <div><dt>Account type</dt><dd><TypePill type={r.accountType} /></dd></div>
-        <div><dt>Email</dt><dd><EmailFact r={r} /></dd></div>
+        <div><dt>Request</dt><dd>#{r.id}</dd></div>
+        <div><dt>Account type</dt><dd><TypePill type={typeOf(r)} />{isChildEntry(r) && <span className="muted"> · one child profile; the parent account was kept</span>}</dd></div>
+        {r.status === 'completed' && <div><dt>Username</dt><dd>{r.username ? <span className="gu">{r.username}</span>
+          : <span className="muted">{detailsRemoved(r) ? 'Details removed' : r.accountType === 'parent' ? 'Parent account (no username)' : '—'}</span>}</dd></div>}
+        <div><dt>{isChildEntry(r) ? 'Parent email' : 'Email'}</dt><dd><EmailFact r={r} /></dd></div>
         <div><dt>Requested from</dt><dd>{SOURCE[r.source] || r.source}</dd></div>
         <div><dt>Requested</dt><dd>{fmt(r.requestedAt)}</dd></div>
         {r.emailVerified != null && <div><dt>Email verified</dt><dd><Verified value={r.emailVerified} /> {r.emailVerified ? 'Yes' : 'No'}</dd></div>}

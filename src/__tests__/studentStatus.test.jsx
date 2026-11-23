@@ -52,7 +52,7 @@ afterEach(() => vi.restoreAllMocks());
 
 const mountApp = (path) => render(<MemoryRouter initialEntries={[path]}><AuthProvider><App /></AuthProvider></MemoryRouter>);
 const mountDetail = async () => { mountApp('/users/7'); await screen.findByRole('heading', { name: 'mom@example.com' }); };
-const section = (username) => screen.getByRole('group', { name: `Loyadham Online Classes for ${username}` });
+const section = (username) => screen.getByRole('group', { name: `Loyadham Online Satsang Classes for ${username}` });
 const buttonsIn = (username) => within(section(username)).queryAllByRole('button').map((b) => b.textContent);
 
 // ---- Users page ----

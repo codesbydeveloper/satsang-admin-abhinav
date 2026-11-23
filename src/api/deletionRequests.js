@@ -12,13 +12,16 @@
  *      404 DELETION_REQUEST_NOT_FOUND, 409 DELETION_REQUEST_DECIDED
  * POST /public/delete-account                 { email, password, confirm: true }  (no login)  202 { requested, requestId, status, requestedAt }
  *
- * Row = { id, accountId, accountType: 'adult'|'parent', source: 'app'|'web', status: 'pending'|'completed'|'rejected',
+ * Row = { id, accountId, accountType: 'adult'|'parent', source: 'app'|'web'|'admin', status: 'pending'|'completed'|'rejected',
+ *         target: 'account'|'child_profile', profileId|null, isParentEmail,   (child_profile: ONE child deleted; accountId = parent)
  *         username|null, email|null, emailRetainedUntil|null, emailVerified|null, childProfiles: number, profilesDeleted|null,
  *         requestedAt, decidedAt|null, decidedBy: { id, name }|null, decisionNote|null }
  * Timestamps are ISO UTC strings ending in "Z". username is null for parent accounts (no profile of their own).
  * Once completed, username/emailVerified are null; email is the retained copy (Full Admin only) until emailRetainedUntil,
  * then null. emailRetainedUntil is set on completed rows that kept an email (in the past once it is erased).
- * q also matches the retained email on completed rows (Full Admin only) until it is erased.
+ * Completed rows also keep the username (the child's for child_profile) until emailRetainedUntil; after that both are
+ * null and the panel shows "Details removed" + the request id. q also matches the retained username or email on
+ * completed rows (Full Admin only) until they are erased, and "#123" matches request 123.
  */
 import { api } from '../api';
 

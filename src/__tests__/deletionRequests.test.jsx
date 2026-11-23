@@ -5,7 +5,7 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import App from '../App';
 import { AuthProvider } from '../auth';
 import { fmt, fmtDate, toDate } from '../components/ui';
-import { EmailFact } from '../pages/DeletionRequests';
+import { displayName, EmailFact } from '../pages/DeletionRequests';
 
 const json = (status, body) => Promise.resolve({ ok: status < 400, status, json: () => Promise.resolve(body) });
 const ago = (min) => new Date(Date.now() - min * 60000).toISOString();
@@ -97,7 +97,7 @@ test('Approve disabled when email not verified; completed rows show only View an
   expect(approve).toBeDisabled();
   expect(approve.closest('[title]')).toHaveAttribute('title', 'Email not verified yet');
   await user.click(screen.getByRole('button', { name: /^Completed/ }));
-  const done = await rowFor('\\(adult account\\)');
+  const done = await rowFor('Details removed');
   expect(within(done).getAllByRole('button').map((b) => b.textContent)).toEqual(['View']);
   routes['GET /admin/deletion-requests/50'] = () => json(200, { request: DONE, account: null, profiles: [] });
   await user.click(within(done).getByRole('button', { name: /View/ }));
@@ -196,7 +196,8 @@ const openCompleted = async (row) => {
   await waitFor(() => expect(global.fetch.mock.calls.some(([u]) => u.endsWith(`/admin/deletion-requests/${row.id}`))).toBe(true));
   return { panel, tr };
 };
-const displayNameRe = (r) => (r.username ? r.username : '\(adult account\)');
+// these rows are served on the default (Pending) tab, whose first column shows displayName
+const displayNameRe = (r) => displayName(r).replace(/[()]/g, '\\$&');
 
 test('completed row with a retained email: list shows it under the name; drawer shows it with the "Kept until" note', async () => {
   const until = days(29);
@@ -211,9 +212,9 @@ test('completed row with a retained email: list shows it under the name; drawer 
   expect(note).toHaveAttribute('title', fmt(until));
 });
 
-test('completed row whose retained email has passed its date shows "— (erased)"', async () => {
+test('completed row whose retained email has passed its date shows "Details removed"', async () => {
   const { panel } = await openCompleted({ ...DONE, email: null, emailRetainedUntil: days(-1) });
-  expect(fact(panel, 'Email')).toHaveTextContent(/^— \(erased\)$/);
+  expect(fact(panel, 'Email')).toHaveTextContent(/^Details removed$/);
   expect(within(panel).queryByText(/Kept until/)).toBeNull();
 });
 
@@ -226,7 +227,7 @@ test('EmailFact: the cut-off is compared with now; a pending row without email s
   const until = '2026-12-01T00:00:00.000Z';
   const at = (iso) => render(<EmailFact r={{ status: 'completed', email: null, emailRetainedUntil: until }} now={Date.parse(iso)} />).container.textContent;
   expect(at('2026-11-30T23:59:59.000Z')).toBe('— (account deleted)');
-  expect(at('2026-12-01T00:00:00.000Z')).toBe('— (erased)');
+  expect(at('2026-12-01T00:00:00.000Z')).toBe('Details removed');
   expect(render(<EmailFact r={{ status: 'pending', email: null }} />).container.textContent).toBe('—');
 });
 
@@ -252,4 +253,63 @@ test('a link with ?status=rejected opens the Rejected tab (the dashboard card li
   render(<MemoryRouter initialEntries={['/deletion-requests?status=rejected']}><AuthProvider><App /></AuthProvider></MemoryRouter>);
   expect(await screen.findByRole('button', { name: /^Rejected/ })).toHaveAttribute('aria-pressed', 'true');
   await waitFor(() => expect(listCalls()[0]).toMatch(/status=rejected/));
+});
+
+// ---- Part E (23 Nov 2026): Completed tab with Username + Email columns, child deletions, "Details removed" ----
+const CHILD_DONE = { ...DONE, id: 61, accountType: 'parent', target: 'child_profile', profileId: 30, source: 'admin', username: 'kid_alpha', email: 'parent@x.org',
+  isParentEmail: true, childProfiles: 0, profilesDeleted: 1, emailRetainedUntil: days(29) };
+const ADULT_DONE = { ...DONE, id: 62, target: 'account', username: 'ravi_k', email: 'ravi@x.org', emailRetainedUntil: days(20), source: 'app', deletedByOwner: true, decidedBy: null };
+const EXPIRED = { ...DONE, id: 123, target: 'account', username: null, email: null, emailRetainedUntil: days(-2) };
+const showCompleted = async (rows) => {
+  routes['GET /admin/deletion-requests'] = (p) => json(200, { ...list(p.get('status') === 'completed' ? rows : [], { pending: 0, completed: rows.length, rejected: 0, all: rows.length }), status: p.get('status') });
+  asRole('full_admin'); const user = userEvent.setup();
+  render(<MemoryRouter initialEntries={['/deletion-requests?status=completed']}><AuthProvider><App /></AuthProvider></MemoryRouter>);
+  await screen.findByTestId(`completed-${rows[0].id}`);
+  return user;
+};
+
+test('Completed tab: separate Username and Email columns with the real values while they are kept', async () => {
+  await showCompleted([ADULT_DONE, CHILD_DONE, EXPIRED]);
+  for (const h of ['Username', 'Email', 'Account type', 'Child profiles', 'Deleted from', 'Deleted', 'Status', 'Actions']) {
+    expect(screen.getByRole('columnheader', { name: h })).toBeInTheDocument();
+  }
+  expect(screen.queryByRole('columnheader', { name: 'Email verified' })).toBeNull();
+  const [nameCell, emailCell] = within(screen.getByTestId('completed-62')).getAllByRole('cell');
+  expect(nameCell).toHaveTextContent('ravi_k');
+  expect(nameCell).toHaveTextContent('Request #62');
+  expect(emailCell).toHaveTextContent('ravi@x.org');
+  expect(emailCell).toHaveTextContent(`Kept until ${fmtDate(ADULT_DONE.emailRetainedUntil)}`);
+  expect(emailCell).not.toHaveTextContent('ravi_k');
+});
+
+test('a deleted child is listed with its username, "Child" type and the parent email labelled "Parent email"', async () => {
+  await showCompleted([CHILD_DONE]);
+  const tr = screen.getByTestId('completed-61');
+  const [nameCell, emailCell, typeCell, kidsCell, fromCell] = within(tr).getAllByRole('cell');
+  expect(nameCell).toHaveTextContent('kid_alpha');
+  expect(emailCell).toHaveTextContent('parent@x.org');
+  expect(within(emailCell).getByText('Parent email')).toBeInTheDocument();
+  expect(typeCell).toHaveTextContent(/child/i);
+  expect(kidsCell).toHaveTextContent('0');
+  expect(fromCell).toHaveTextContent('Admin Panel');
+});
+
+test('after the period: "Details removed" and the request id, no username or email', async () => {
+  await showCompleted([EXPIRED]);
+  const [nameCell, emailCell] = within(screen.getByTestId('completed-123')).getAllByRole('cell');
+  expect(nameCell).toHaveTextContent('Details removed');
+  expect(nameCell).toHaveTextContent('Request #123');
+  expect(emailCell).toHaveTextContent(/^—$/);
+});
+
+test('search on the Completed tab sends q (username, email or #ID); the Admin Panel source can be picked', async () => {
+  const user = await showCompleted([ADULT_DONE]);
+  const box = screen.getByRole('searchbox');
+  expect(box).toHaveAttribute('placeholder', 'Search username, email or #ID');
+  await user.type(box, 'kid_al');
+  await user.click(screen.getByRole('button', { name: 'Search' }));
+  await waitFor(() => expect(listCalls().at(-1)).toMatch(/status=completed/));
+  await waitFor(() => expect(listCalls().at(-1)).toMatch(/q=kid_al/));
+  await user.selectOptions(screen.getByRole('combobox'), 'admin');
+  await waitFor(() => expect(listCalls().at(-1)).toMatch(/source=admin/));
 });

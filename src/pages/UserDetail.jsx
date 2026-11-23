@@ -42,11 +42,11 @@ function AgeGroupEditor({ profile, onSaved }) {
   );
 }
 
-// Loyadham Online Classes: the admin actions each status allows (backend: utils/studentStatus.js TRANSITIONS).
+// Loyadham Online Satsang Classes: the admin actions each status allows (backend: utils/studentStatus.js TRANSITIONS).
 const STUDENT_ACTIONS = {
   verify: {
     label: `Verify student (+${STUDENT_SPARKS.verified} Sparks)`, title: 'Verify this student?', confirm: 'Verify student',
-    body: (u) => <>Confirm that <b className="gu">{u}</b> is enrolled in Loyadham Online Classes. {STUDENT_SPARKS.verified} Sparks are reserved for this profile (given once only).</>,
+    body: (u) => <>Confirm that <b className="gu">{u}</b> is enrolled in Loyadham Online Satsang Classes. {STUDENT_SPARKS.verified} Sparks are reserved for this profile (given once only).</>,
     done: (u, n) => `${u} verified as a student${n ? ` · +${n} Sparks reserved` : ' · no new Sparks (already given before)'}`,
   },
   reject: {
@@ -56,7 +56,7 @@ const STUDENT_ACTIONS = {
   },
   confirm_interest: {
     label: `Confirm interest (+${STUDENT_SPARKS.interestConfirmed} Sparks)`, title: 'Confirm this interest?', confirm: 'Confirm interest',
-    body: (u) => <>Confirm that <b className="gu">{u}</b> is interested in joining Loyadham Online Classes. {STUDENT_SPARKS.interestConfirmed} Sparks are reserved for this profile (given once only).</>,
+    body: (u) => <>Confirm that <b className="gu">{u}</b> is interested in joining Loyadham Online Satsang Classes. {STUDENT_SPARKS.interestConfirmed} Sparks are reserved for this profile (given once only).</>,
     done: (u, n) => `${u}: interest confirmed${n ? ` · +${n} Sparks reserved` : ' · no new Sparks (already given before)'}`,
   },
   reset: {
@@ -91,8 +91,8 @@ function StudentSection({ profile: p, canAct, onAction }) {
   const actions = canAct ? actionsFor(p.studentStatus) : [];
   const confirmedBy = p.studentStatus === 'interest_confirmed' ? 'Confirmed by' : 'Verified by';
   return (
-    <div className="student" role="group" aria-label={`Loyadham Online Classes for ${p.username}`}>
-      <div className="student-head"><h5>Loyadham Online Classes</h5><StudentChip status={p.studentStatus || 'not_asked'} /></div>
+    <div className="student" role="group" aria-label={`Loyadham Online Satsang Classes for ${p.username}`}>
+      <div className="student-head"><h5>Loyadham Online Satsang Classes</h5><StudentChip status={p.studentStatus || 'not_asked'} /></div>
       <dl className="facts">
         {p.studentVerifiedAt && <div><dt>{confirmedBy}</dt><dd>{p.studentVerifiedByName || (p.studentVerifiedBy ? `Admin #${p.studentVerifiedBy}` : '—')}</dd></div>}
         {p.studentVerifiedAt && <div><dt>{confirmedBy === 'Verified by' ? 'Verified on' : 'Confirmed on'}</dt><dd title={fmt(p.studentVerifiedAt)}>{fmtDate(p.studentVerifiedAt)}</dd></div>}
@@ -192,6 +192,9 @@ export default function UserDetail() {
 
   const { account: a, profiles } = data;
   const children = profiles.filter((p) => p.isChild);
+  const isParent = a.accountType === 'parent';
+  const kidsText = (n) => `${n} child profile${n === 1 ? '' : 's'}`;
+  const deleteAccountLabel = isParent ? 'Delete parent account and all child profiles' : 'Delete account';
   return (
     <div className="page">
       {back}
@@ -219,13 +222,18 @@ export default function UserDetail() {
           <div><dt>Email verified</dt><dd>{a.emailVerifiedAt ? fmtDate(a.emailVerifiedAt) : 'Not yet'}</dd></div>
           <div><dt>Privacy consent</dt><dd>{a.consentAcceptedAt ? `${fmtDate(a.consentAcceptedAt)}${a.privacyPolicyVersion ? ` · v${a.privacyPolicyVersion}` : ''}` : '—'}</dd></div>
         </dl>
-        <div className="danger-zone">
-          <div>
-            <b>Delete account</b>
-            <p className="muted">Removes this account and {profiles.length === 1 ? 'its profile' : `all ${profiles.length} profiles`} permanently.</p>
+        {/* Deleting is Full Admin only (the backend answers 403 otherwise). */}
+        {isFull && (
+          <div className="danger-zone">
+            <div>
+              <b>{deleteAccountLabel}</b>
+              <p className="muted">{isParent
+                ? <>Removes the parent account and {children.length === 0 ? 'its child profiles (none yet)' : `all ${kidsText(children.length)}`} permanently. To remove one child only, use “Delete this child profile” on that child.</>
+                : <>Removes this account and {profiles.length === 1 ? 'its profile' : `all ${profiles.length} profiles`} permanently.</>}</p>
+            </div>
+            <button type="button" className="danger-btn" onClick={() => setDialog({ kind: 'deleteAccount' })}><Icon name="trash" size={16} />{deleteAccountLabel}</button>
           </div>
-          <button type="button" className="danger-btn" onClick={() => setDialog({ kind: 'deleteAccount' })}><Icon name="trash" size={16} />Delete account</button>
-        </div>
+        )}
       </div>
 
       <div className="page-head">
@@ -254,7 +262,7 @@ export default function UserDetail() {
             </dl>
             <StudentSection profile={p} canAct={isFull} onAction={(profile, action) => setDialog({ kind: 'student', profile, action })} />
             <AgeGroupEditor profile={p} onSaved={load} />
-            {p.isChild && (
+            {p.isChild && isFull && (
               <div className="card-foot">
                 <button type="button" className="link danger" onClick={() => setDialog({ kind: 'deleteProfile', profile: p })} aria-label={`Delete profile ${p.username}`}>
                   <Icon name="trash" size={15} />Delete this child profile
@@ -272,29 +280,37 @@ export default function UserDetail() {
       {toast.element}
       {dialog?.kind === 'rename' && <RenameDialog profile={dialog.profile} onClose={close} onDone={done} />}
       {dialog?.kind === 'deleteProfile' && (
-        <DeleteDialog title="Delete child profile?" confirmWord={dialog.profile.username} actionLabel="Delete profile" onClose={close}
-          onConfirm={async (reason) => { await adminApi.deleteProfile(dialog.profile.id, reason); done(); }}>
-          <p>You are about to delete <b className="gu">{dialog.profile.username}</b> from {a.email}. This removes:</p>
-          <ul className="danger-list">
-            <li>the profile and its username</li>
-            <li>its Sparks, streak, scores, progress, Dress Up items and saved Shangars</li>
-          </ul>
-          <p className="muted">The parent account and other child profiles are not affected.</p>
+        <DeleteDialog title="Delete this child profile?" confirmWord={dialog.profile.username} actionLabel="Delete child profile" onClose={close}
+          onConfirm={async (reason) => {
+            const name = dialog.profile.username;
+            await adminApi.deleteProfile(dialog.profile.id, reason);
+            done(); toast.show(`${name} was deleted. The parent account and other children were not changed.`);
+          }}>
+          <p>Child profile: <b className="gu">{dialog.profile.username}</b> <span className="muted">(parent: {a.email})</span></p>
+          <p className="notice info"><Icon name="shield" size={16} /><span>Only this child is deleted. The parent and other children keep their accounts, progress and Sparks.</span></p>
+          <p>This removes the child’s username and its own data: progress, activity, Loyadham Online Satsang Classes status and its reserved Sparks.</p>
         </DeleteDialog>
       )}
       {dialog?.kind === 'deleteAccount' && (
-        <DeleteDialog title="Delete this account?" confirmWord={a.email} actionLabel="Delete account" onClose={close}
+        <DeleteDialog title={isParent ? 'Delete parent account and all child profiles?' : 'Delete this account?'} confirmWord={a.email}
+          actionLabel={isParent ? 'Delete parent and children' : 'Delete account'} onClose={close}
           onConfirm={async (reason) => {
             const r = await adminApi.deleteUserAccount(a.id, reason);
             const n = r.profilesDeleted ?? profiles.length;
             navigate('/users', { state: { notice: `${a.email} was deleted, with ${n} profile${n === 1 ? '' : 's'}.` } });
           }}>
-          <p>You are about to permanently delete <b>{a.email}</b>. This removes:</p>
+          {isParent ? <>
+            <p>Parent account: <b>{a.email}</b></p>
+            <p className="delete-kids">{children.length === 0 ? 'This parent has no child profiles.'
+              : <>This will delete {kidsText(children.length)}: <b className="gu">{children.map((c) => c.username).join(', ')}</b></>}</p>
+          </> : <p>You are about to permanently delete <b>{a.email}</b>.</p>}
+          <p>This removes:</p>
           <ul className="danger-list">
-            <li>the account, its email and password</li>
+            <li>the account, its email and password{isParent && ' and the Parent PIN'}</li>
             <li>{profiles.length === 0 ? 'no profiles (none were created)' : `${profiles.length} profile${profiles.length > 1 ? 's' : ''}`}{children.length > 0 && <>, including <b>{children.length} child profile{children.length > 1 ? 's' : ''}</b></>}</li>
             <li>all Sparks, streaks, scores, progress, Dress Up items and saved Shangars</li>
           </ul>
+          <p className="muted">A deletion confirmation is emailed to {a.email}. The email{isParent ? '' : ' and username'} stay visible to Full Admins in Deletion requests → Completed for 30 days.</p>
         </DeleteDialog>
       )}
     </div>

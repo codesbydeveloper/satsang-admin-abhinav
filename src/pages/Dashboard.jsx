@@ -56,7 +56,7 @@ function SummaryCards({ s, timeZone }) {
   // Deletion requests with status pending (web requests waiting for a Full Admin); an older backend sends none.
   const pending = s.pendingDeletions;
   const hasPending = typeof pending === 'number';
-  // Loyadham Online Classes: profiles pending_verification + interested (an older backend sends none).
+  // Loyadham Online Satsang Classes: profiles pending_verification + interested (an older backend sends none).
   const students = s.studentsToVerify;
   const hasStudents = typeof students === 'number';
   // Each card opens Users with the filter that gives the same count (backend: totals ↔ GET /admin/users totalRows).
@@ -73,7 +73,7 @@ function SummaryCards({ s, timeZone }) {
       })}
       {card('students', 'Students to verify', hasStudents ? students : '—', {
         to: `/users?studentStatus=${TO_VERIFY}`, warn: hasStudents && students > 0,
-        title: 'Loyadham Online Classes: enrolments to verify + interests to confirm',
+        title: 'Loyadham Online Satsang Classes: enrolments to verify + interests to confirm',
         hint: !hasStudents ? 'Not available'
           : typeof s.studentsPendingVerification === 'number' && students > 0
             ? `${s.studentsPendingVerification} pending · ${s.studentsInterested} interested`

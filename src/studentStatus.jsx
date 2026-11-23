@@ -1,4 +1,4 @@
-// Loyadham Online Classes (Bals-Balikas or Kishor-Kishori Classes): one student status per playable profile.
+// Loyadham Online Satsang Classes (Bals-Balikas or Kishor-Kishori Classes): one student status per playable profile.
 // Backend rules: satsang-backend src/utils/studentStatus.js (POST /admin/profiles/:id/student-status, Full Admin only).
 
 export const STUDENT_STATUS = {
