@@ -19,7 +19,8 @@ export const SORT_COLUMNS = [
 const SORT_KEYS = SORT_COLUMNS.map(([k]) => k).filter(Boolean);
 const defaultOrder = (sort) => (sort === 'joined' ? 'desc' : 'asc');
 export const ACCOUNT_TYPES = [['', 'All'], ['adult', 'Adult'], ['parent', 'Parent'], ['child', 'Child']];
-const FILTER_KEYS = ['q', 'country', 'ageGroup', 'accountType', 'classStatus', 'studentStatus'];
+const FILTER_KEYS = ['q', 'country', 'ageGroup', 'accountType', 'classStatus', 'studentStatus', 'joinedSince'];
+const validInstant = (s) => (s && !Number.isNaN(Date.parse(s)) ? s : '');
 
 let regionNames;
 try { regionNames = new Intl.DisplayNames(['en'], { type: 'region' }); } catch { regionNames = null; }
@@ -56,6 +57,8 @@ export default function Users() {
   const sort = SORT_KEYS.includes(params.get('sort')) ? params.get('sort') : 'joined';
   const order = ['asc', 'desc'].includes(params.get('order')) ? params.get('order') : defaultOrder(sort);
   const page = Math.max(1, Number.parseInt(params.get('page'), 10) || 1);
+  // The dashboard's "New registrations today" card: accounts created since the start of today (its time zone).
+  const joinedSince = validInstant(params.get('joinedSince'));
   const [q, setQ] = useState(applied);
   useEffect(() => setQ(applied), [applied]);
 
@@ -71,7 +74,7 @@ export default function Users() {
   const sortBy = (key) => update(key === sort ? { sort: key, order: order === 'asc' ? 'desc' : 'asc' } : { sort: key, order: defaultOrder(key) });
   const clear = () => { setQ(''); setParams((p) => { const n = new URLSearchParams(p); [...FILTER_KEYS, 'page'].forEach((k) => n.delete(k)); return n; }, { replace: true }); };
 
-  const query = { q: applied, country, ageGroup, accountType, classStatus: classStatus === 'all' ? undefined : classStatus, studentStatus, sort, order, page, pageSize };
+  const query = { q: applied, country, ageGroup, accountType, classStatus: classStatus === 'all' ? undefined : classStatus, studentStatus, joinedSince, sort, order, page, pageSize };
   const key = JSON.stringify(query);
   useEffect(() => { run(async () => {
     const r = await adminApi.users(query);
@@ -82,7 +85,7 @@ export default function Users() {
   useOnTabReturn(refresh);
 
   const pages = data ? Math.max(1, Math.ceil(data.totalAccounts / pageSize)) : 1;
-  const filtered = !!(applied || country || ageGroup || accountType || classStatus !== 'all' || studentStatus);
+  const filtered = !!(applied || country || ageGroup || accountType || classStatus !== 'all' || studentStatus || joinedSince);
   const classValue = studentStatus === TO_VERIFY ? TO_VERIFY : classStatus;
   const classOptions = CLASS_STATUS_FILTERS.concat(studentStatus === TO_VERIFY ? [{ value: TO_VERIFY, label: 'To verify (pending + interested)' }] : []);
   const cols = SORT_COLUMNS.length + 1;
@@ -123,8 +126,16 @@ export default function Users() {
               {classOptions.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
             </select>
           </label>
+          {joinedSince && (
+            <span className="pill info filter-chip">Joined since {fmt(joinedSince)}
+              <button type="button" className="chip-x" aria-label="Remove the joined since filter" onClick={() => update({ joinedSince: null })}>×</button>
+            </span>
+          )}
           <RefreshButton loading={busy && !!data} onClick={refresh} />
           {filtered && <button type="button" className="btn-secondary" onClick={clear}>Clear</button>}
+          {filtered && typeof data?.totalRows === 'number' && (
+            <span className="muted match-count" role="status">{data.totalRows.toLocaleString()} matching {data.totalRows === 1 ? 'row' : 'rows'}</span>
+          )}
         </form>
         {error && <div style={{ padding: '12px 20px 0' }}><Err error={error} /></div>}
         <div className="table-scroll">
@@ -164,15 +175,18 @@ function UserRow({ r }) {
   const type = child ? 'child' : r.accountType;
   const age = ageGroupLabel(r.ageGroupKey) || r.ageGroup;
   const who = r.username || r.name || r.email;
+  // A parent account is the family header: it has no profile (no username) of its own.
+  const parentHead = !child && r.accountType === 'parent';
+  const parentLabel = <span className="muted parent-label">Parent account</span>;
   return (
-    <tr className={`${child ? 'child-row' : 'account-row'}${dim ? ' row-dim' : ''}`} data-testid={`user-row-${r.accountId}-${r.profileId ?? 'account'}`}
-      title={dim ? 'Shown because a child profile matches' : undefined}>
+    <tr className={`${child ? 'child-row' : 'account-row'}${parentHead ? ' family-head' : ''}${dim ? ' row-dim' : ''}`}
+      data-testid={`user-row-${r.accountId}-${r.profileId ?? 'account'}`} title={dim ? 'Shown because a child profile matches' : undefined}>
       <td>
         {child
           ? <span className="child-name"><span className="child-mark" aria-label="child profile of the account above">↳ child</span>{r.name || null}</span>
-          : (r.name ? <span className="cell-main">{r.name}</span> : <Dash />)}
+          : (r.name ? <span className="cell-main">{r.name}</span> : (parentHead ? parentLabel : <Dash />))}
       </td>
-      <td>{r.username ? <Link to={`/users/${r.accountId}`} className="cell-main gu">{r.username}</Link> : <Dash />}</td>
+      <td>{r.username ? <Link to={`/users/${r.accountId}`} className="cell-main gu">{r.username}</Link> : (parentHead ? parentLabel : <Dash />)}</td>
       <td><TypePill type={type} /></td>
       <td>{r.country ? <span title={r.country}>{countryName(r.country)}</span> : <Dash />}</td>
       <td>{fmtDob(r.dob) || <Dash />}</td>

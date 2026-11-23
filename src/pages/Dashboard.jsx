@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { adminApi } from '../api';
 import { ageGroupLabel } from '../ageGroups';
 import { useAuth } from '../auth';
@@ -59,13 +59,14 @@ function SummaryCards({ s, timeZone }) {
   // Loyadham Online Classes: profiles pending_verification + interested (an older backend sends none).
   const students = s.studentsToVerify;
   const hasStudents = typeof students === 'number';
+  // Each card opens Users with the filter that gives the same count (backend: totals ↔ GET /admin/users totalRows).
+  const today = s.todayStartsAt ? `/users?joinedSince=${encodeURIComponent(s.todayStartsAt)}` : '/users?sort=joined&order=desc';
   return (
     <div className="stats">
-      {card('total', 'Total accounts', s.accounts, { to: '/users' })}
-      {card('adult', 'Adult / independent', s.adultAccounts)}
-      {card('parent', 'Parent accounts', s.parentAccounts)}
-      {card('child', 'Child profiles', s.childProfiles)}
-      {card('today', 'New registrations today', s.newRegistrationsToday, { hint: `Since midnight, ${zoneName(timeZone)}`, title: timeZone ? `Days are counted in ${timeZone}` : undefined })}
+      {card('adult', 'Adults', s.adultAccounts, { to: '/users?accountType=adult', hint: 'Independent accounts' })}
+      {card('parent', 'Parent accounts', s.parentAccounts, { to: '/users?accountType=parent' })}
+      {card('child', 'Child profiles', s.childProfiles, { to: '/users?accountType=child' })}
+      {card('today', 'New registrations today', s.newRegistrationsToday, { to: today, hint: `Since midnight, ${zoneName(timeZone)}`, title: timeZone ? `Days are counted in ${timeZone}` : undefined })}
       {card('deletions', 'Pending deletion requests', hasPending ? pending : '—', {
         to: '/deletion-requests?status=pending', warn: hasPending && pending > 0,
         hint: !hasPending ? 'Not available' : pending > 0 ? '⚠ Needs review' : 'All clear',
@@ -79,6 +80,23 @@ function SummaryCards({ s, timeZone }) {
             : students > 0 ? '⚠ Needs review' : 'All clear',
       })}
     </div>
+  );
+}
+
+// Full Admin only: Enter opens the Users page searching name, username or email (?q=).
+function SearchUsers() {
+  const [q, setQ] = useState('');
+  const navigate = useNavigate();
+  const go = (e) => { e.preventDefault(); const v = q.trim(); navigate(v ? `/users?q=${encodeURIComponent(v)}` : '/users'); };
+  return (
+    <form className="dash-search" role="search" onSubmit={go}>
+      <label htmlFor="dash-search-input" className="dash-search-label">Search users</label>
+      <div className="search">
+        <Icon name="search" size={18} />
+        <input id="dash-search-input" type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Name, username or email" autoComplete="off" />
+      </div>
+      <button>Search</button>
+    </form>
   );
 }
 
@@ -169,7 +187,7 @@ function QuickActions({ isFull }) {
 function Skeleton() {
   return (
     <div aria-busy="true" aria-label="Loading dashboard">
-      <div className="stats">{Array.from({ length: 7 },(_, i) => <div key={i} className="stat skeleton" style={{ height: 96 }} />)}</div>
+      <div className="stats">{Array.from({ length: 6 }, (_, i) => <div key={i} className="stat skeleton" style={{ height: 96 }} />)}</div>
       <div className="dash-grid">
         <div className="panel skeleton" style={{ height: 320 }} />
         <div className="panel skeleton" style={{ height: 320 }} />
@@ -191,6 +209,7 @@ export default function Dashboard() {
       <WelcomeBar admin={admin} isFull={isFull} />
       {isFull && (
         <>
+          <SearchUsers />
           {error && (
             <div className="error-box" role="alert">
               <p>{error.message || 'Could not load the dashboard.'}</p>
@@ -201,6 +220,7 @@ export default function Dashboard() {
           {data && (
             <>
               <SummaryCards s={data.totals} timeZone={data.timeZone} />
+              {/* charts and recent activity below the cards */}
               <div className="dash-grid">
                 <Panel title="Users by age group">
                   <p className="muted">Profiles in each age group (adults and children)</p>

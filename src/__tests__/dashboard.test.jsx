@@ -48,8 +48,8 @@ test('Full Admin: calls the dashboard API and shows welcome bar + live cards', a
   expect(await screen.findByRole('heading', { name: 'Welcome, Abhinav' })).toBeInTheDocument();
   expect(screen.getByText('Full Admin', { selector: '.badge' })).toBeInTheDocument();
   const card = async (label) => within(await screen.findByLabelText(label));
-  (await card('Total accounts')).getByText('1,248');
-  (await card('Adult / independent')).getByText('859');
+  expect(screen.queryByLabelText('Total accounts')).toBeNull();   // replaced by the separate totals (client 23 Nov 2026)
+  (await card('Adults')).getByText('859');
   (await card('Parent accounts')).getByText('389');
   (await card('Child profiles')).getByText('532');
   (await card('New registrations today')).getByText('17');
@@ -134,7 +134,7 @@ test('shows the server error with a retry button', async () => {
   const user = userEvent.setup(); mount();
   expect(await screen.findByRole('alert')).toHaveTextContent('Server is down');
   await user.click(screen.getByRole('button', { name: 'Try again' }));
-  expect(await screen.findByLabelText('Total accounts')).toBeInTheDocument();
+  expect(await screen.findByLabelText('Adults')).toBeInTheDocument();
   expect(calls).toBe(2);
 });
 
