@@ -18,5 +18,6 @@
 - [x] User detail: Delete account popup on live `DELETE /admin/users/:accountId` (confirm + reason)
 - [x] User detail: owner's first name, last name and gender (private; from backend branch `m1/signup-fields`, "—" for older accounts)
 - [x] Referrals page (Full Admin only, client change 30 Oct 2026): the four referral settings (new user Sparks, referrer Sparks, window hours, max per referrer / unlimited), saved with the audit log, and the referrals list (code, referrer and referee usernames, status, dates); hidden from Content Editors (backend `m1/client-30oct`)
+- [x] Trusted devices + Remember me (client change 23 Nov 2026, backend Part F1): password-only sign-in on a trusted browser (device token kept after logout, forgotten on deviceTokenInvalid); Remember me (default on) keeps the session 30 days with automatic token refresh, off = this browser session only; My account → Trusted devices (list/remove); Admins → Devices per admin; "Full Admins: used/max" and the FULL_ADMIN_LIMIT message on invite / change role
 - [ ] User detail: Rename username and Delete child profile popups — designed; need backend endpoints (see `src/api.js` NOT CONNECTED YET)
 - [ ] Verified by Abhinav and merged

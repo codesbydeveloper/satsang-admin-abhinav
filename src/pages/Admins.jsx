@@ -4,6 +4,7 @@ import { useAuth } from '../auth';
 import { EmptyRow, Err, fmt, isEmail, Modal, PageHead, timeAgo, toDate, useToast } from '../components/ui';
 import { Icon } from '../components/icons';
 import { initials } from '../components/Layout';
+import DevicesList from '../components/DevicesList';
 
 // Full Admin only (the route and menu are hidden for Content Editors; the backend answers 403 too).
 // New admins are invited by email: they choose their own password on /accept-invite. Nobody types a password for them.
@@ -12,6 +13,9 @@ export const ROLE_LABEL = { full_admin: 'Full Admin', content_editor: 'Content E
 const otherRole = (r) => (r === 'full_admin' ? 'content_editor' : 'full_admin');
 // Older backends sent only isActive; treat that as active / inactive.
 const statusOf = (a) => a.status || (a.isActive ? 'active' : 'inactive');
+// 409 FULL_ADMIN_LIMIT: show the server's message (it names the limit); a fallback only if it sent none.
+const limitError = (e) => (e?.code === 'FULL_ADMIN_LIMIT' && /^Request failed/.test(e.message)
+  ? new Error('The Full Admin limit is reached. Make someone a Content Editor or deactivate a Full Admin first.') : e);
 const when = (d) => toDate(d).toLocaleString(undefined, { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' });
 
 export function StatusBadge({ admin, now = Date.now() }) {
@@ -32,17 +36,19 @@ export default function Admins() {
   const [busyId, setBusyId] = useState(null);
   const [inviting, setInviting] = useState(false);
   const [confirm, setConfirm] = useState(null);   // { kind: 'cancel' | 'role' | 'deactivate', admin }
+  const [devicesOf, setDevicesOf] = useState(null);   // admin whose trusted devices are open
+  const [limit, setLimit] = useState(null);           // { max, used } Full Admins (active + invited)
   const toast = useToast();
 
   const load = async () => {
-    try { setList((await adminApi.admins()).admins); } catch (e) { setError(e); }
+    try { const r = await adminApi.admins(); setList(r.admins); setLimit(r.fullAdminLimit || null); } catch (e) { setError(e); }
   };
   useEffect(() => { load(); /* eslint-disable-next-line */ }, []);
 
   // Runs one row action; the server's message (e.g. LAST_FULL_ADMIN) is shown as is.
   const act = async (a, fn, done) => {
     setBusyId(a.id); setError(null);
-    try { await fn(); toast.show(done); await load(); return true; } catch (e) { setError(e); return false; } finally { setBusyId(null); }
+    try { await fn(); toast.show(done); await load(); return true; } catch (e) { setError(limitError(e)); return false; } finally { setBusyId(null); }
   };
   const resend = (a) => act(a, () => adminApi.resendInvite(a.id), `New invite sent to ${a.email}`);
   const reactivate = (a) => act(a, () => adminApi.updateAdmin(a.id, { active: true }), `${a.email} can log in again`);
@@ -54,6 +60,8 @@ export default function Admins() {
   return (
     <div className="page">
       <PageHead title="Admins" subtitle="People who can sign in to this panel. Full Admins see everything; Content Editors see content and blocked words only.">
+        {limit && <span className={`pill ${limit.used >= limit.max ? 'warn' : 'muted'}`} data-testid="full-admin-limit"
+          title="Active and invited Full Admins count; deactivated ones do not.">Full Admins: {limit.used}/{limit.max}</span>}
         <button type="button" onClick={() => setInviting(true)}><Icon name="plus" size={16} />Add admin</button>
       </PageHead>
       <Err error={error} />
@@ -88,6 +96,7 @@ export default function Admins() {
                       </>}
                       {s === 'inactive' && <button className="link" disabled={busy} onClick={() => reactivate(a)}>Reactivate</button>}
                       {s !== 'invited' && !self && <button className="link" disabled={busy} onClick={() => resetPw(a)}>Reset password</button>}
+                      {s !== 'invited' && !self && <button className="link" disabled={busy} onClick={() => setDevicesOf(a)}>Devices</button>}
                       {self && <span className="muted" title="You can't change your own role or deactivate yourself.">Your account</span>}
                     </td>
                   </tr>
@@ -100,6 +109,13 @@ export default function Admins() {
 
       {inviting && <InviteModal onClose={() => setInviting(false)} onSent={(email) => { setInviting(false); toast.show(`Invite sent to ${email}`); load(); }} />}
       {confirm && <ConfirmModal {...confirm} onClose={() => setConfirm(null)} onDone={(msg) => { setConfirm(null); toast.show(msg); load(); }} />}
+      {devicesOf && (
+        <Modal title={`Trusted devices – ${devicesOf.name || devicesOf.email}`} onClose={() => setDevicesOf(null)}>
+          <DevicesList load={() => adminApi.adminDevices(devicesOf.id)} remove={(id) => adminApi.removeAdminDevice(devicesOf.id, id)}
+            onRemoved={() => toast.show(`Device removed for ${devicesOf.email}`)} />
+          <div className="modal-foot"><button type="button" className="btn-secondary" onClick={() => setDevicesOf(null)}>Close</button></div>
+        </Modal>
+      )}
       {toast.element}
     </div>
   );
@@ -125,7 +141,7 @@ function InviteModal({ onClose, onSent }) {
       setBusy(false);
       if (err.code === 'ADMIN_EXISTS') setEmailError('An admin with this email already exists.');
       else if (err.code === 'EMAIL_FAILED') setError(new Error("We couldn't send the invite email. Nothing was saved. Please try again."));
-      else setError(err);
+      else setError(limitError(err));
     }
   };
 
@@ -180,7 +196,7 @@ function ConfirmModal({ kind, admin: a, onClose, onDone }) {
 
   const go = async () => {
     setBusy(true); setError(null);
-    try { await cfg.call(); onDone(cfg.done); } catch (e) { setBusy(false); setError(e); }
+    try { await cfg.call(); onDone(cfg.done); } catch (e) { setBusy(false); setError(limitError(e)); }
   };
   return (
     <Modal title={cfg.title} tone={cfg.danger ? 'danger' : undefined} onClose={onClose}>

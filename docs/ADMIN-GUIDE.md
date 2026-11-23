@@ -15,7 +15,10 @@ Logging in has two steps.
 **Step 1: Email and password**
 
 1. Type your **Email** and **Password**.
-2. Click **Continue**.
+2. Leave **Remember me** ticked to stay signed in on this browser for 30 days. Untick it on a shared computer: you are then signed out when the browser closes.
+3. Click **Continue**.
+
+On a browser you have used before (a **trusted device**), you are signed in now, with no code. On a new browser, Step 2 follows.
 
 **Step 2: The code from your email**
 
@@ -32,6 +35,9 @@ Good to know:
 - After 5 wrong codes, you go back to Step 1. Log in again.
 - After too many wrong tries, your login is locked for 15 minutes. Wait, then try again.
 - To begin again at any time, click **Start over**.
+- After the code, this browser becomes a trusted device. **Log out** does not remove it.
+- See and remove your trusted devices in **My account → Trusted devices**. Removing a device means the next sign-in there needs an email code. Full Admins can remove another admin's devices on the **Admins** page (**Devices**).
+- There can be at most **3 Full Admins** (active and invited). The Admins page shows **Full Admins: used/max**.
 
 ## 3. Roles: what each admin can do
 

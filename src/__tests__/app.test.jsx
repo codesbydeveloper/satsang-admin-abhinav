@@ -36,10 +36,10 @@ test('maskEmail keeps the first letter and the domain', () => {
 });
 
 test('login -> emailed code -> dashboard with the Full Admin menus', async () => {
-  routes['POST /admin/auth/login'] = (o) => { expect(JSON.parse(o.body)).toEqual({ email: 'asha@example.com', password: 'secret-password' }); return json(200, CHALLENGE); };
+  routes['POST /admin/auth/login'] = (o) => { expect(JSON.parse(o.body)).toEqual({ email: 'asha@example.com', password: 'secret-password', rememberMe: true }); return json(200, CHALLENGE); };
   routes['POST /admin/auth/verify-otp'] = (o) => {
     expect(o.headers.Authorization).toBeUndefined();
-    expect(JSON.parse(o.body)).toEqual({ challengeToken: 'chal1', code: '123456' });
+    expect(JSON.parse(o.body)).toEqual({ challengeToken: 'chal1', code: '123456', trustDevice: true });
     return json(200, { token: 'admintok', admin: ADMIN });
   };
   const user = userEvent.setup(); mount();
@@ -52,7 +52,7 @@ test('login -> emailed code -> dashboard with the Full Admin menus', async () =>
   expect(await screen.findByRole('link', { name: 'Audit log' })).toBeInTheDocument();
   expect(screen.getByRole('link', { name: 'Admins' })).toBeInTheDocument();
   expect(screen.getByRole('link', { name: 'Dashboard' })).toBeInTheDocument();
-  expect(sessionStorage.getItem('ssa_admin_token')).toBe('admintok');
+  expect(localStorage.getItem('ssa_admin_token')).toBe('admintok');   // Remember me is on by default
   expect(verifyCalls()).toHaveLength(1);
 });
 

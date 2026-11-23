@@ -4,6 +4,7 @@ import { useAuth } from '../auth';
 import { Err, PageHead, useAction } from '../components/ui';
 import { Icon } from '../components/icons';
 import { initials } from '../components/Layout';
+import DevicesList from '../components/DevicesList';
 
 export default function Account() {
   const { admin, signOut } = useAuth();
@@ -42,6 +43,10 @@ export default function Account() {
           <Err error={error} />
           <button disabled={busy}><Icon name="key" size={16} />{busy ? 'Changing…' : 'Change password'}</button>
         </form>
+      </div>
+      <div className="card">
+        <div className="card-head"><div><h3>Trusted devices</h3><p className="muted">Browsers where you can sign in with your password only.</p></div></div>
+        <DevicesList load={adminApi.myDevices} remove={adminApi.removeMyDevice} />
       </div>
     </div>
   );

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { adminApi } from '../api';
+import { adminApi, getDeviceToken, setDeviceToken } from '../api';
 import { useAuth } from '../auth';
 import { Err } from '../components/ui';
 import { Icon } from '../components/icons';
@@ -7,6 +7,8 @@ import { FullLogo } from '../components/brand';
 
 // Login is two steps: email + password -> 6-digit code sent by email -> signed in.
 // The challenge token lives only in this component's state (never in storage); a reload starts over.
+// Trusted device: after the first code, this browser keeps a device token (localStorage, kept on logout) and
+// later sign-ins finish after the password (step: 'done'). Remember me picks localStorage + refresh vs sessionStorage.
 
 // a***@example.com: first letter of the name part, then the domain.
 export const maskEmail = (email) => {
@@ -24,6 +26,7 @@ export default function Login() {
   const [challenge, setChallenge] = useState(null);  // { token, email }
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [remember, setRemember] = useState(true);
   const [code, setCode] = useState('');
   const [resendIn, setResendIn] = useState(0);       // seconds until "Resend code" is allowed
   const [busy, setBusy] = useState(false);
@@ -52,16 +55,19 @@ export default function Login() {
 
   const submitPassword = (e) => { e.preventDefault(); setError(null); guard(async () => {
     try {
-      const r = await adminApi.login(email.trim(), password);
-      setChallenge({ token: r.challengeToken, email: email.trim() });
+      const r = await adminApi.login(email.trim(), password, { deviceToken: getDeviceToken() || undefined, rememberMe: remember });
+      if (r.deviceTokenInvalid) setDeviceToken(null);   // revoked or unknown: forget it; the code step below trusts again
+      if (r.step === 'done') { signIn(r.token, r.admin, { refreshToken: r.refreshToken, remember }); return; }
+      setChallenge({ token: r.challengeToken, email: email.trim(), remember });
       setResendIn(r.resendAfterSeconds ?? 60); setCode(''); setNotice(''); setStep('code');
     } catch (err) { setError(msg(err, 'Sign in failed.')); }
   }); };
 
   const verify = (value) => { setError(null); setNotice(''); guard(async () => {
     try {
-      const r = await adminApi.verifyOtp(challenge.token, value);
-      signIn(r.token, r.admin);
+      const r = await adminApi.verifyOtp(challenge.token, value, true);
+      if (r.deviceToken) setDeviceToken(r.deviceToken);
+      signIn(r.token, r.admin, { refreshToken: r.refreshToken, remember: challenge.remember });
     } catch (err) {
       setCode('');
       switch (err.code) {
@@ -119,6 +125,8 @@ export default function Login() {
             <form onSubmit={submitPassword}>
               <label>Email<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="username" placeholder="you@example.org" required /></label>
               <label>Password<input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" required /></label>
+              <label className="inline check"><input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
+                <span>Remember me<span className="hint"> Stay signed in on this browser for 30 days. Untick on a shared computer.</span></span></label>
               <Err error={error} />
               <button disabled={busy}>{busy ? 'Checking…' : 'Continue'}</button>
             </form>
@@ -131,6 +139,7 @@ export default function Login() {
               <label>Code<input ref={codeRef} className="code-input" value={code} onChange={onCode} inputMode="numeric" pattern="[0-9]*" autoComplete="one-time-code" placeholder="••••••" maxLength={12} autoFocus required /></label>
               <Err error={error} />
               {notice && <p className="muted" role="status">{notice}</p>}
+              <p className="info-note"><Icon name="shield" size={16} />After this code, this browser is trusted: next time only your password is needed.</p>
               <button disabled={busy || code.length !== 6}>{busy ? 'Checking…' : 'Log in'}</button>
               <button type="button" className="link" onClick={resend} disabled={busy || resendIn > 0}>
                 {resendIn > 0 ? `Resend code in ${resendIn}s` : 'Resend code'}
