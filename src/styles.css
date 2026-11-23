@@ -342,3 +342,21 @@ fieldset.choice .row { gap:16px; } fieldset.choice label.inline { color:var(--fg
   .topbar { padding:0 14px; } .content { padding:16px 14px 28px; } .auth-card { padding:24px 20px; }
   th, td { padding:10px 12px; }
 }
+
+/* Users table (grouped by account; sortable headers; scrolls sideways on narrow screens) */
+.users-table { min-width:1180px; }
+.users-table td { white-space:nowrap; }
+.th-sort { all:unset; cursor:pointer; display:inline-flex; align-items:center; gap:4px; font:inherit; color:inherit; text-transform:inherit; letter-spacing:inherit; }
+.th-sort:hover { color:var(--fg); } .th-sort:focus-visible { outline:2px solid var(--brand); outline-offset:2px; border-radius:3px; }
+th[aria-sort="ascending"] .th-sort, th[aria-sort="descending"] .th-sort { color:var(--fg); }
+.sort-arrow { font-size:9px; min-width:9px; }
+.users-table tr.account-row td { border-top:1px solid var(--line); }
+.users-table tr.child-row td { border-bottom-style:dashed; }
+.users-table tr.child-row td:first-child { padding-left:34px; }
+.child-name { display:inline-flex; align-items:center; gap:8px; }
+.child-mark { font-size:11.5px; font-weight:600; color:var(--muted); }
+.email-label { display:block; font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
+.users-table tr.row-dim td { opacity:.5; }
+.users-toolbar .search { flex:1 1 240px; }
+.users-toolbar label.inline { flex-wrap:wrap; }
+@media (max-width:640px) { .users-toolbar label.inline { flex:1 1 45%; } .users-toolbar select { flex:1; min-width:0; margin-left:0; } }

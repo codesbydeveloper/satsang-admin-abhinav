@@ -96,6 +96,14 @@ Rules that keep the panel safe:
 
 If you know your password and just want a new one, use **My account → Change password**. You are then logged out everywhere and log in again.
 
+## 6b. The Users page (Full Admins only)
+
+- Every playable profile is one row. A parent account comes first; its children follow right under it, marked **↳ child**.
+- A child has no email of its own: the row shows **Parent email** and the parent's email in grey.
+- Click a column title to sort. Click it again to reverse. The arrow shows the direction. Children always stay under their parent.
+- Search by name, username or email, and filter by **Country**, **Age group**, **Account type** and **Class Status**. A greyed parent row is shown only because one of its children matches.
+- Click **Clear** to remove the search and every filter. The address bar keeps your filters and sort, so you can bookmark or share a view.
+
 ## 7. Deletion requests (Full Admins only)
 
 People can ask for their account to be deleted on the website. These requests come here. A number next to **Deletion requests** in the menu shows how many are waiting.

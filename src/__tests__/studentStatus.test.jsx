@@ -57,45 +57,7 @@ const buttonsIn = (username) => within(section(username)).queryAllByRole('button
 
 // ---- Users page ----
 
-test('Users: Online Classes filter has every option and sends studentStatus (together with q)', async () => {
-  const user = userEvent.setup(); mountApp('/users');
-  await screen.findByText('radha_seva');
-  const select = screen.getByLabelText('Online Classes', { selector: 'select' });
-  expect([...select.options].map((o) => o.textContent)).toEqual(
-    ['All', 'Pending verification', 'Interested', 'Verified', 'Interested – confirmed', 'Not enrolled', 'Not answered', 'To verify (pending + interested)']);
-  expect(listCalls().at(-1)).not.toMatch(/studentStatus/);
-
-  await user.selectOptions(select, 'Pending verification');
-  await waitFor(() => expect(listCalls().at(-1)).toMatch(/studentStatus=pending_verification/));
-  await user.type(screen.getByLabelText('Search username or email'), 'kid');
-  await user.click(screen.getByRole('button', { name: 'Search' }));
-  await waitFor(() => expect(listCalls().at(-1)).toMatch(/q=kid/));
-  expect(listCalls().at(-1)).toMatch(/studentStatus=pending_verification/);
-
-  await user.selectOptions(select, 'Not answered');
-  await waitFor(() => expect(listCalls().at(-1)).toMatch(/studentStatus=not_asked/));
-  await user.click(screen.getByRole('button', { name: 'Clear' }));
-  await waitFor(() => expect(listCalls().at(-1)).not.toMatch(/studentStatus|q=kid/));
-  expect(select).toHaveValue('');
-});
-
-test('Users: a status chip per profile and "n children pending" once per parent', async () => {
-  mountApp('/users'); await screen.findByText('radha_seva');
-  const rowOf = (name) => screen.getByRole('link', { name }).closest('tr');
-  expect(within(rowOf('radha_seva')).getByText('Verified student')).toBeInTheDocument();
-  expect(within(rowOf('kid_one')).getByText('Pending verification')).toBeInTheDocument();
-  expect(within(rowOf('kid_three')).getByText('Interested')).toBeInTheDocument();
-  expect(screen.getAllByText('2 children pending')).toHaveLength(1);
-  expect(within(rowOf('kid_one')).getByText('2 children pending')).toBeInTheDocument();
-  expect(within(rowOf('radha_seva')).queryByText(/children pending/)).toBeNull();
-});
-
-test('Users: ?studentStatus= in the URL (dashboard link) preselects the filter and is sent', async () => {
-  mountApp('/users?studentStatus=pending_verification,interested');
-  await screen.findByText('radha_seva');
-  expect(screen.getByLabelText('Online Classes', { selector: 'select' })).toHaveValue('pending_verification,interested');
-  expect(listCalls().at(-1)).toMatch(/studentStatus=pending_verification,interested/);
-});
+// The Users table and its Class Status filter: src/__tests__/usersTable.test.jsx.
 
 // ---- User detail ----
 
@@ -195,11 +157,11 @@ test('Content Editor: sees the status and Sparks, but no student-status buttons'
   expect(posts()).toHaveLength(0);
 });
 
-test('Content Editor: no Users route, so no Online Classes filter', async () => {
+test('Content Editor: no Users route, so no Class Status filter', async () => {
   role = 'content_editor';
   mountApp('/users?studentStatus=pending_verification');
   expect(await screen.findByRole('heading', { name: /Welcome/ })).toBeInTheDocument();
-  expect(screen.queryByLabelText('Online Classes')).toBeNull();
+  expect(screen.queryByLabelText('Class Status')).toBeNull();
   expect(listCalls()).toHaveLength(0);
 });
 
@@ -227,7 +189,8 @@ test('Dashboard: "Students to verify" shows pending + interested and opens Users
   expect(card).toHaveAttribute('href', '/users?studentStatus=pending_verification,interested');
   await user.click(card);
   expect(await screen.findByRole('heading', { name: 'Users' })).toBeInTheDocument();
-  expect(screen.getByLabelText('Online Classes', { selector: 'select' })).toHaveValue('pending_verification,interested');
+  // the old link still works: shown as its own Class Status option and sent as studentStatus
+  expect(screen.getByLabelText('Class Status', { selector: 'select' })).toHaveValue('pending_verification,interested');
   await waitFor(() => expect(listCalls().at(-1)).toMatch(/studentStatus=pending_verification,interested/));
 });
 

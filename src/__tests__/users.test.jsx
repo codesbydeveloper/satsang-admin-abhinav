@@ -99,7 +99,7 @@ test('Add user: 409 EMAIL_TAKEN shows under Email; 400 field details show under 
 test('Refresh reloads with the same search and page; also when coming back to the tab', async () => {
   const user = userEvent.setup(); mount();
   await screen.findByText('radha_seva');
-  await user.type(screen.getByLabelText('Search username or email'), 'radha');
+  await user.type(screen.getByLabelText('Search name, username or email'), 'radha');
   await user.click(screen.getByRole('button', { name: 'Search' }));
   await waitFor(() => expect(userCalls().at(-1)).toMatch(/q=radha/));
   const n = userCalls().length;
