@@ -153,6 +153,9 @@ function writeUsers_(data) {
   }
   sheet.autoResizeColumns(1, n);
   all.createFilter();
+  for (var c = 1; c <= sheet.getLastColumn(); c++) {
+  sheet.setColumnWidth(c, Math.max(sheet.getColumnWidth(c) + 28, 110));
+}
 }
 
 function writeInfo_(info) {
