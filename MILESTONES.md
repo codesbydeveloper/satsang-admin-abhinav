@@ -12,7 +12,7 @@
 - [x] Dashboard (cards, age-group/registrations/mode/language charts, recent registrations, admin activity, quick actions) on live `GET /admin/dashboard` (not in the M1 list: confirm scope with Loyadham)
 - [x] Deletion Requests page (tabs + counts, search, source filter, view panel, approve/reject, sidebar badge, refresh) on live `/admin/deletion-requests` APIs
 - [x] Deletion request drawer (19 Nov 2026): retained email with a "Kept until <date> – then erased automatically for privacy." note; "— (erased)" after that date, "— (account deleted)" when none was kept; timestamps from the backend are ISO UTC and shown in local time (fixes Requested vs Handled 5h30 apart)
-- [ ] Users: "Add user" popup — built; `createUser` in `src/api/users.js` is a mock until the backend has `POST /admin/users` (not in the M1 list: confirm scope with Loyadham)
+- [x] Users page is view only: "Add user" removed (client: app accounts are created only in the app)
 - [x] Refresh button + reload on returning to the tab (Users, Deletion requests)
 - [x] Whole-panel UI refresh (sidebar with icons, top bar, login, every page; light/dark; tablet drawer)
 - [x] User detail: Delete account popup on live `DELETE /admin/users/:accountId` (confirm + reason)

@@ -1,11 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { adminApi } from '../api';
-import { createUser } from '../api/users';
 import { useAuth } from '../auth';
 import { AGE_GROUPS, ageGroupLabel } from '../ageGroups';
 import { CLASS_STATUS_FILTERS, classStatusFromUrl, StudentChip, TO_VERIFY } from '../studentStatus';
-import { EmptyRow, Err, fmt, fmtDate, isEmail, Modal, PageHead, Pager, RefreshButton, TypePill, useAction, useOnTabReturn, useToast } from '../components/ui';
+import { EmptyRow, Err, fmt, fmtDate, PageHead, Pager, RefreshButton, TypePill, useAction, useOnTabReturn, useToast } from '../components/ui';
 import { Icon } from '../components/icons';
 
 // The Users table (client 23 Nov 2026): one row per playable profile, grouped by account. The account row comes
@@ -39,7 +38,6 @@ export default function Users() {
   const { isFull } = useAuth();
   const [params, setParams] = useSearchParams();
   const [reload, setReload] = useState(0);
-  const [adding, setAdding] = useState(false);
   const [data, setData] = useState(null);
   const [countries, setCountries] = useState([]);
   const { busy, error, run } = useAction();
@@ -120,7 +118,6 @@ export default function Users() {
             {exporting && <span className="spinner" aria-hidden="true" />}{exporting ? 'Exporting…' : 'Export to CSV'}
           </button>
         )}
-        {isFull && <button type="button" onClick={() => setAdding(true)}><Icon name="plus" size={16} />Add user</button>}
       </PageHead>
       {notice && <p className="notice success" role="status"><Icon name="check" size={16} />{notice}</p>}
       {exportError && <Err error={exportError} />}
@@ -200,7 +197,6 @@ export default function Users() {
         </div>
         <Pager page={page} pages={pages} total={data?.totalAccounts} noun="accounts" onPage={(p) => update({ page: p > 1 ? p : null })} />
       </div>
-      {adding && <AddUserModal onClose={() => setAdding(false)} onCreated={() => { setAdding(false); toast.show('User created'); refresh(); }} />}
       {toast.element}
     </div>
   );
@@ -239,107 +235,5 @@ function UserRow({ r }) {
       <td title={fmt(r.joined || r.createdAt)}>{fmtDate(r.joined || r.createdAt)}</td>
       <td className="actions"><Link className="btn-small" to={`/users/${r.accountId}`} aria-label={`View ${who}`}>View</Link></td>
     </tr>
-  );
-}
-
-const PHONE = /^\+?[0-9 ()\-]{7,20}$/;   // same rule as the backend
-function checkPassword(p) {
-  if (p.length < 8) return 'Use at least 8 characters';
-  if (p.length > 72) return 'Use at most 72 characters';
-  if (!/[A-Za-z]/.test(p) || !/\d/.test(p)) return 'Include at least one letter and one number';
-  return '';
-}
-
-function AddUserModal({ onClose, onCreated }) {
-  const [f, setF] = useState({ email: '', password: '', accountType: '', language: 'en', mode: 'satsang', phone: '', emailVerified: false });
-  const [show, setShow] = useState(false);
-  const [touched, setTouched] = useState({});
-  const [server, setServer] = useState({});   // field -> message from the server
-  const [formError, setFormError] = useState(null);
-  const [busy, setBusy] = useState(false);
-  const set = (k) => (e) => { const v = e.target.type === 'checkbox' ? e.target.checked : e.target.value; setF((x) => ({ ...x, [k]: v })); setServer((s) => ({ ...s, [k]: undefined })); };
-  const blur = (k) => () => setTouched((t) => ({ ...t, [k]: true }));
-
-  const local = {
-    email: !f.email.trim() ? 'Enter an email' : !isEmail(f.email) ? 'Enter a valid email' : '',
-    password: !f.password ? 'Enter a password' : checkPassword(f.password),
-    accountType: f.accountType ? '' : 'Choose an account type',
-    phone: f.phone.trim() && !PHONE.test(f.phone.trim()) ? 'Enter a valid phone number' : '',
-  };
-  const valid = !Object.values(local).some(Boolean);
-  const msg = (k) => server[k] || (touched[k] ? local[k] : '');
-  const fieldError = (k) => msg(k) && <span className="field-error" id={`${k}-err`}>{msg(k)}</span>;
-  const described = (k) => (msg(k) ? `${k}-err` : undefined);
-
-  const submit = async (e) => {
-    e.preventDefault();
-    if (!valid || busy) return;
-    setBusy(true); setFormError(null);
-    try {
-      await createUser({ email: f.email.trim(), password: f.password, accountType: f.accountType, language: f.language, mode: f.mode,
-        phone: f.phone.trim() || null, emailVerified: f.emailVerified });
-      onCreated();
-    } catch (err) {
-      setBusy(false);
-      if (err.status === 409 && err.code === 'EMAIL_TAKEN') { setServer({ email: 'An account with this email already exists' }); return; }
-      if (err.status === 400 && err.details?.length) {
-        const byField = {};
-        err.details.forEach((d) => { if (d.field in f && !byField[d.field]) byField[d.field] = d.message; });
-        setServer(byField);
-        if (Object.keys(byField).length) return;
-      }
-      setFormError(err);
-    }
-  };
-
-  return (
-    <Modal title="Add user" onClose={onClose}>
-      <form onSubmit={submit} noValidate>
-        <label>Email
-          <input type="email" value={f.email} onChange={set('email')} onBlur={blur('email')} autoComplete="off" required aria-invalid={!!msg('email')} aria-describedby={described('email')} />
-          {fieldError('email')}
-        </label>
-        <label>Password
-          <span className="pw-field">
-            <input type={show ? 'text' : 'password'} value={f.password} onChange={set('password')} onBlur={blur('password')} autoComplete="new-password" required aria-invalid={!!msg('password')} aria-describedby={described('password') || 'pw-hint'} />
-            <button type="button" className="eye" onClick={() => setShow(!show)} aria-label={show ? 'Hide password' : 'Show password'} aria-pressed={show}>
-              <Icon name={show ? 'eye-off' : 'eye'} size={18} />
-            </button>
-          </span>
-          {fieldError('password') || <span className="hint" id="pw-hint">At least 8 characters, with a letter and a number.</span>}
-        </label>
-
-        <fieldset className="choice" aria-describedby={described('accountType')}>
-          <legend>Account type</legend>
-          <div className="row">
-            <label className="inline"><input type="radio" name="accountType" value="adult" checked={f.accountType === 'adult'} onChange={set('accountType')} onBlur={blur('accountType')} required />Adult</label>
-            <label className="inline"><input type="radio" name="accountType" value="parent" checked={f.accountType === 'parent'} onChange={set('accountType')} onBlur={blur('accountType')} />Parent</label>
-          </div>
-          {fieldError('accountType')}
-        </fieldset>
-
-        <div className="form-grid">
-          <label>Language
-            <select value={f.language} onChange={set('language')}><option value="en">English</option><option value="gu">Gujarati</option></select>
-            {fieldError('language')}
-          </label>
-          <label>Mode
-            <select value={f.mode} onChange={set('mode')}><option value="sanatan">Sanatan</option><option value="satsang">Satsang</option></select>
-            {fieldError('mode')}
-          </label>
-        </div>
-        <label>Phone <span className="muted">(optional)</span>
-          <input type="tel" value={f.phone} onChange={set('phone')} onBlur={blur('phone')} autoComplete="off" aria-invalid={!!msg('phone')} aria-describedby={described('phone')} />
-          {fieldError('phone')}
-        </label>
-        <label className="inline check"><input type="checkbox" checked={f.emailVerified} onChange={set('emailVerified')} />Mark email as verified</label>
-        <p className="info-note"><Icon name="child" size={16} />Child profiles can only be added by the parent in the app.</p>
-        <Err error={formError} />
-        <div className="modal-foot">
-          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button disabled={!valid || busy}>{busy && <span className="spinner" aria-hidden="true" />}{busy ? 'Creating…' : 'Create user'}</button>
-        </div>
-      </form>
-    </Modal>
   );
 }

@@ -98,6 +98,8 @@ If you know your password and just want a new one, use **My account → Change p
 
 ## 6b. The Users page (Full Admins only)
 
+The Users page is for viewing. App accounts are created only in the app: there is no "Add user" button. Admins are invited from the Admins page.
+
 - Every playable profile is one row. A parent account comes first; its children follow right under it, marked **↳ child**.
 - A child has no email of its own: the row shows **Parent email** and the parent's email in grey.
 - Click a column title to sort. Click it again to reverse. The arrow shows the direction. Children always stay under their parent.
