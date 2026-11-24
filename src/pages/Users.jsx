@@ -84,6 +84,24 @@ export default function Users() {
   const refresh = () => setReload((n) => n + 1);   // same search, filters, sort and page
   useOnTabReturn(refresh);
 
+  // Export to CSV (Full Admin): the current search, filters and sort, every page (the server ignores page/pageSize).
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState(null);
+  const exportCsv = async () => {
+    if (exporting) return;
+    setExporting(true); setExportError(null);
+    try {
+      const { page: _p, pageSize: _s, ...filters } = query;
+      const { blob, filename } = await adminApi.exportUsersCsv(filters);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = filename;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      toast.show('CSV downloaded');
+    } catch (e) { setExportError(e); } finally { setExporting(false); }
+  };
+
   const pages = data ? Math.max(1, Math.ceil(data.totalAccounts / pageSize)) : 1;
   const filtered = !!(applied || country || ageGroup || accountType || classStatus !== 'all' || studentStatus || joinedSince);
   // Clear is always shown; it does something when a search/filter is on, text is typed, or we are past page 1.
@@ -96,9 +114,16 @@ export default function Users() {
   return (
     <div className="page">
       <PageHead title="Users" subtitle="Every playable profile, grouped by account: the account first, then its children. Open one to see details or correct an age group.">
+        {isFull && (
+          <button type="button" className="btn-secondary" onClick={exportCsv} disabled={exporting}
+            title="Download every row that matches the current search, filters and sort (all pages)">
+            {exporting && <span className="spinner" aria-hidden="true" />}{exporting ? 'Exporting…' : 'Export to CSV'}
+          </button>
+        )}
         {isFull && <button type="button" onClick={() => setAdding(true)}><Icon name="plus" size={16} />Add user</button>}
       </PageHead>
       {notice && <p className="notice success" role="status"><Icon name="check" size={16} />{notice}</p>}
+      {exportError && <Err error={exportError} />}
       <div className="card flush">
         {/* Row 1: search. Row 2: four equal filters, then Refresh + Clear (all 40px, bottom-aligned). */}
         <form className="toolbar users-toolbar" onSubmit={(e) => { e.preventDefault(); update({ q: q.trim() }); }}>

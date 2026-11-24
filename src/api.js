@@ -77,7 +77,8 @@ export class ApiError extends Error {
 
 const isAuthPath = (path) => path.startsWith('/admin/auth/') || path.startsWith('/public/');
 
-export async function api(path, { method = 'GET', body, token, params, retried = false } = {}) {
+// raw: true returns the fetch Response itself on success (file downloads); errors are still read as JSON.
+export async function api(path, { method = 'GET', body, token, params, raw = false, retried = false } = {}) {
   const qs = params ? '?' + new URLSearchParams(Object.entries(params).filter(([, v]) => v !== undefined && v !== '')).toString() : '';
   // token: undefined = "use the admin session". /admin/auth/me is the session check on start, so it counts too.
   const sessionCall = token === undefined && (!isAuthPath(path) || path === '/admin/auth/me');
@@ -94,12 +95,13 @@ export async function api(path, { method = 'GET', body, token, params, retried =
   } catch {
     throw new ApiError(0, 'NETWORK', 'Cannot reach the server. Check your connection.');
   }
+  if (raw && res.ok) return res;
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     const e = data.error || {};
     // A stale admin session (never the login steps): try the refresh token once, else back to login.
     if (res.status === 401 && sessionCall) {
-      if (!retried && getRefreshToken() && await refreshSession()) return api(path, { method, body, params, retried: true });
+      if (!retried && getRefreshToken() && await refreshSession()) return api(path, { method, body, params, raw, retried: true });
       if (!isAuthPath(path)) onUnauthorized();
     }
     throw new ApiError(res.status, e.code || 'ERROR', e.message || `Request failed (${res.status})`, e.details);
@@ -134,6 +136,13 @@ export const adminApi = {
   acceptInvite: (inviteToken, password) => api('/admin/auth/accept-invite', { method: 'POST', token: '', body: { token: inviteToken, password } }),
   resetAdminPassword: (id, newPassword) => api(`/admin/admins/${id}/reset-password`, { method: 'POST', body: { newPassword } }),
   users: (params) => api('/admin/users', { params }),
+  // Export to CSV (Full Admin; audited users.exported): the same filters and sort as users(), every page.
+  // Returns { blob, filename }; the server names it satsang-spark-users-YYYY-MM-DD.csv.
+  exportUsersCsv: async (params) => {
+    const res = await api('/admin/users/export.csv', { params, raw: true });
+    const m = /filename="?([^";]+)"?/i.exec(res.headers?.get?.('content-disposition') || '');
+    return { blob: await res.blob(), filename: m ? m[1] : `satsang-spark-users-${new Date().toISOString().slice(0, 10)}.csv` };
+  },
   user: (id) => api(`/admin/users/${id}`),
   // Loyadham Online Satsang Classes: action 'verify' | 'reject' | 'confirm_interest' | 'reset' (Full Admin; audited).
   studentStatusAction: (profileId, action) => api(`/admin/profiles/${profileId}/student-status`, { method: 'POST', body: { action } }),
