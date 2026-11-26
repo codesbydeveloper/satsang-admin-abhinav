@@ -7,6 +7,7 @@ import { Err, fmt, fmtDate, Modal, TypePill, useAction, useToast, YesNo } from '
 import { SPARKS_NOTE, STUDENT_SPARKS, STUDENT_STATUS, StudentChip } from '../studentStatus';
 import { Icon } from '../components/icons';
 import { initials } from '../components/Layout';
+import SparksPanel from '../components/SparksPanel';
 
 const LANG = { en: 'English', gu: 'ગુજરાતી (Gujarati)' };
 const MODE = { sanatan: 'Sanatan', satsang: 'Satsang' };
@@ -46,8 +47,8 @@ function AgeGroupEditor({ profile, onSaved }) {
 const STUDENT_ACTIONS = {
   verify: {
     label: `Verify student (+${STUDENT_SPARKS.verified} Sparks)`, title: 'Verify this student?', confirm: 'Verify student',
-    body: (u) => <>Confirm that <b className="gu">{u}</b> is enrolled in Loyadham Online Satsang Classes. {STUDENT_SPARKS.verified} Sparks are reserved for this profile (given once only).</>,
-    done: (u, n) => `${u} verified as a student${n ? ` · +${n} Sparks reserved` : ' · no new Sparks (already given before)'}`,
+    body: (u) => <>Confirm that <b className="gu">{u}</b> is enrolled in Loyadham Online Satsang Classes. {STUDENT_SPARKS.verified} Sparks are added to this profile’s Sparks balance (given once only).</>,
+    done: (u, n) => `${u} verified as a student${n ? ` · +${n} Sparks added to the balance` : ' · no new Sparks (already given before)'}`,
   },
   reject: {
     label: 'Reject', title: 'Reject this enrolment?', confirm: 'Reject', secondary: true,
@@ -56,8 +57,8 @@ const STUDENT_ACTIONS = {
   },
   confirm_interest: {
     label: `Confirm interest (+${STUDENT_SPARKS.interestConfirmed} Sparks)`, title: 'Confirm this interest?', confirm: 'Confirm interest',
-    body: (u) => <>Confirm that <b className="gu">{u}</b> is interested in joining Loyadham Online Satsang Classes. {STUDENT_SPARKS.interestConfirmed} Sparks are reserved for this profile (given once only).</>,
-    done: (u, n) => `${u}: interest confirmed${n ? ` · +${n} Sparks reserved` : ' · no new Sparks (already given before)'}`,
+    body: (u) => <>Confirm that <b className="gu">{u}</b> is interested in joining Loyadham Online Satsang Classes. {STUDENT_SPARKS.interestConfirmed} Sparks are added to this profile’s Sparks balance (given once only).</>,
+    done: (u, n) => `${u}: interest confirmed${n ? ` · +${n} Sparks added to the balance` : ' · no new Sparks (already given before)'}`,
   },
   reset: {
     label: 'Reset', title: 'Reset the student status?', confirm: 'Reset', secondary: true,
@@ -96,7 +97,7 @@ function StudentSection({ profile: p, canAct, onAction }) {
       <dl className="facts">
         {p.studentVerifiedAt && <div><dt>{confirmedBy}</dt><dd>{p.studentVerifiedByName || (p.studentVerifiedBy ? `Admin #${p.studentVerifiedBy}` : '—')}</dd></div>}
         {p.studentVerifiedAt && <div><dt>{confirmedBy === 'Verified by' ? 'Verified on' : 'Confirmed on'}</dt><dd title={fmt(p.studentVerifiedAt)}>{fmtDate(p.studentVerifiedAt)}</dd></div>}
-        <div><dt>Sparks reserved</dt><dd>{(p.studentSparksAwarded ?? 0).toLocaleString()}</dd></div>
+        <div><dt>Class Sparks given</dt><dd>{(p.studentSparksAwarded ?? 0).toLocaleString()}</dd></div>
         {p.studentStatusUpdatedAt && <div><dt>Last change</dt><dd title={fmt(p.studentStatusUpdatedAt)}>{fmtDate(p.studentStatusUpdatedAt)}</dd></div>}
       </dl>
       <p className="sparks-note">{SPARKS_NOTE}</p>
@@ -183,6 +184,14 @@ export default function UserDetail() {
   const { error, run } = useAction();
   const load = () => run(async () => setData(await adminApi.user(id)));
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [id]);
+  // Admin names for "Admin / reason" in the Sparks history (Full Admin only; falls back to "Admin #id").
+  const [admins, setAdmins] = useState({});
+  useEffect(() => {
+    if (!isFull) return undefined;
+    let live = true;
+    adminApi.admins().then((r) => { if (live) setAdmins(Object.fromEntries((r.admins || []).map((x) => [x.id, x.name || x.email]))); }).catch(() => { /* optional */ });
+    return () => { live = false; };
+  }, [isFull]);
   const close = () => setDialog(null);
   const done = () => { close(); load(); };
 
@@ -261,6 +270,8 @@ export default function UserDetail() {
               <div><dt>Language</dt><dd className="gu">{LANG[p.language] || p.language}</dd></div>
             </dl>
             <StudentSection profile={p} canAct={isFull} onAction={(profile, action) => setDialog({ kind: 'student', profile, action })} />
+            {/* Sparks belong to the playable profile (own profile or each child). Key: reload after a student action. */}
+            {isFull && <SparksPanel key={`${p.id}-${p.studentStatus}-${p.studentSparksAwarded}`} profile={p} canAdjust={isFull} adminName={(aid) => admins[aid]} onToast={toast.show} />}
             <AgeGroupEditor profile={p} onSaved={load} />
             {p.isChild && isFull && (
               <div className="card-foot">
@@ -288,7 +299,7 @@ export default function UserDetail() {
           }}>
           <p>Child profile: <b className="gu">{dialog.profile.username}</b> <span className="muted">(parent: {a.email})</span></p>
           <p className="notice info"><Icon name="shield" size={16} /><span>Only this child is deleted. The parent and other children keep their accounts, progress and Sparks.</span></p>
-          <p>This removes the child’s username and its own data: progress, activity, Loyadham Online Satsang Classes status and its reserved Sparks.</p>
+          <p>This removes the child’s username and its own data: progress, activity, Loyadham Online Satsang Classes status and its Sparks balance and history.</p>
         </DeleteDialog>
       )}
       {dialog?.kind === 'deleteAccount' && (

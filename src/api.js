@@ -146,6 +146,17 @@ export const adminApi = {
   user: (id) => api(`/admin/users/${id}`),
   // Loyadham Online Satsang Classes: action 'verify' | 'reject' | 'confirm_interest' | 'reset' (Full Admin; audited).
   studentStatusAction: (profileId, action) => api(`/admin/profiles/${profileId}/student-status`, { method: 'POST', body: { action } }),
+  // Sparks (Full Admin; backend chunk 2.1). Balance: { profileId, balance, lifetimeEarned, lifetimeSpent, pending }.
+  profileSparks: (profileId) => api(`/admin/profiles/${profileId}/sparks`),
+  // History, newest first: { page, pageSize, total, items: [{ id, transactionId, amount, type, status, note, createdBy, createdAt, … }] }.
+  sparksHistory: (profileId, params) => api(`/admin/profiles/${profileId}/sparks/history`, { params }),
+  // amount ≠ 0 (negative deducts), reason 3–255 chars (audited sparks.adjusted). transactionId makes a retry safe.
+  // 201 new / 200 duplicate: { duplicate, transaction, balance, … }; 409 INSUFFICIENT_SPARKS { details: { balance, needed } }.
+  adjustSparks: (profileId, { amount, reason, transactionId }) => api(`/admin/profiles/${profileId}/sparks/adjust`, { method: 'POST', body: { amount, reason, transactionId } }),
+  // Reward per activity and age group: { activities, ageGroups: [{ key, label }], rewards: [{ activity, ageGroup, sparks, defaultSparks, isDefault, … }], note }.
+  sparksConfig: () => api('/admin/sparks/config'),
+  // Partial update (only the rows sent); audited sparks.config_changed. Returns { changed: [{ activity, ageGroup, from, to }], …config }.
+  saveSparksConfig: (rewards) => api('/admin/sparks/config', { method: 'PUT', body: { rewards } }),
   setAgeGroup: (profileId, ageGroup, reason) => api(`/admin/users/profiles/${profileId}/age-group`, { method: 'PATCH', body: { ageGroup, reason } }),
   words: () => api('/admin/blocked-words'),
   addWord: (word, kind) => api('/admin/blocked-words', { method: 'POST', body: { word, kind } }),

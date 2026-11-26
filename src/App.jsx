@@ -13,6 +13,7 @@ import Dashboard from './pages/Dashboard';
 import DeletionRequests from './pages/DeletionRequests';
 import Referrals from './pages/Referrals';
 import AcceptInvite from './pages/AcceptInvite';
+import SparksSettings from './pages/SparksSettings';
 
 export default function App() {
   const { admin, ready, isFull } = useAuth();
@@ -38,6 +39,7 @@ export default function App() {
           <Route path="/referrals" element={<Referrals />} />
           <Route path="/admins" element={<Admins />} />
           <Route path="/audit-log" element={<AuditLog />} />
+          <Route path="/sparks-settings" element={<SparksSettings />} />
         </>}
         <Route path="/blocked-words" element={<BlockedWords />} />
         <Route path="/account" element={<Account />} />

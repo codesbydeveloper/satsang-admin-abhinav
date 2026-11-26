@@ -61,7 +61,7 @@ const buttonsIn = (username) => within(section(username)).queryAllByRole('button
 
 // ---- User detail ----
 
-test('User detail: buttons by status, verified by / when, Sparks reserved with the note', async () => {
+test('User detail: buttons by status, verified by / when, class Sparks given with the note', async () => {
   await mountDetail();
   expect(buttonsIn('kid_pending')).toEqual(['Verify student (+10 Sparks)', 'Reject']);
   expect(buttonsIn('kid_interested')).toEqual(['Confirm interest (+5 Sparks)']);
@@ -74,8 +74,8 @@ test('User detail: buttons by status, verified by / when, Sparks reserved with t
   expect(within(v).getByText('Verified student')).toBeInTheDocument();
   expect(within(v).getByText('Verified by').nextSibling).toHaveTextContent('Seva Admin');
   expect(within(v).getByText('Verified on').nextSibling).toHaveTextContent(/2026/);
-  expect(within(v).getByText('Sparks reserved').nextSibling).toHaveTextContent('10');
-  expect(within(v).getByText('Reserved – becomes spendable when Sparks launch.')).toBeInTheDocument();
+  expect(within(v).getByText('Class Sparks given').nextSibling).toHaveTextContent('10');
+  expect(within(v).getByText('Added to this profile’s Sparks balance (see Sparks below).')).toBeInTheDocument();
   expect(within(v).getByText(/Sparks already given are not taken back/)).toBeInTheDocument();
   expect(within(section('kid_pending')).queryByText('Verified by')).toBeNull();
 });
@@ -84,7 +84,7 @@ test('Verify: confirm dialog, Cancel sends nothing, Confirm posts the action, to
   await mountDetail(); const user = userEvent.setup();
   await user.click(screen.getByRole('button', { name: 'Verify student (+10 Sparks) for kid_pending' }));
   let dialog = screen.getByRole('dialog', { name: 'Verify this student?' });
-  expect(dialog).toHaveTextContent('10 Sparks are reserved');
+  expect(dialog).toHaveTextContent('10 Sparks are added to this profile’s Sparks balance');
   await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
   expect(screen.queryByRole('dialog')).toBeNull();
   expect(posts()).toHaveLength(0);
@@ -94,7 +94,7 @@ test('Verify: confirm dialog, Cancel sends nothing, Confirm posts the action, to
   await user.click(screen.getByRole('button', { name: 'Verify student (+10 Sparks) for kid_pending' }));
   dialog = screen.getByRole('dialog', { name: 'Verify this student?' });
   await user.click(within(dialog).getByRole('button', { name: 'Verify student' }));
-  expect(await screen.findByText('kid_pending verified as a student · +10 Sparks reserved')).toBeInTheDocument();
+  expect(await screen.findByText('kid_pending verified as a student · +10 Sparks added to the balance')).toBeInTheDocument();
   expect(screen.queryByRole('dialog')).toBeNull();
   const [url, opts] = posts()[0];
   expect(url).toMatch(/\/api\/v1\/admin\/profiles\/30\/student-status$/);
@@ -114,7 +114,7 @@ test('Reject, Confirm interest and Reset each confirm first and send their actio
   await doAction('Reject for kid_pending', 'Reject this enrolment?', 'Reject');
   expect(await screen.findByText('kid_pending: enrolment rejected')).toBeInTheDocument();
   await doAction('Confirm interest (+5 Sparks) for kid_interested', 'Confirm this interest?', 'Confirm interest');
-  expect(await screen.findByText('kid_interested: interest confirmed · +5 Sparks reserved')).toBeInTheDocument();
+  expect(await screen.findByText('kid_interested: interest confirmed · +5 Sparks added to the balance')).toBeInTheDocument();
 
   await user.click(screen.getByRole('button', { name: 'Reset for kid_verified' }));
   expect(screen.getByRole('dialog', { name: 'Reset the student status?' })).toHaveTextContent('Sparks already given are not taken back.');

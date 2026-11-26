@@ -39,7 +39,9 @@ export function classStatusFromUrl(classStatus, studentStatus) {
 // server actually gave (sparksAwarded).
 export const STUDENT_SPARKS = { verified: 10, interestConfirmed: 5 };
 
-export const SPARKS_NOTE = 'Reserved – becomes spendable when Sparks launch.';
+// Since Milestone 2 these Sparks go straight into the profile's Sparks balance (ledger types student_verified /
+// student_interest); the Sparks section of the profile shows the balance and history.
+export const SPARKS_NOTE = 'Added to this profile’s Sparks balance (see Sparks below).';
 
 export function StudentChip({ status }) {
   const s = STUDENT_STATUS[status];

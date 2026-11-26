@@ -49,7 +49,7 @@ const tr = (accountId, profileId) => within(screen.getByTestId(`user-row-${accou
 test('columns in the agreed order', async () => {
   await mount();
   expect(screen.getAllByRole('columnheader').map((h) => h.textContent.replace(/[▲▼]/g, '').trim()))
-    .toEqual(['Name', 'Username', 'Account type', 'Country', 'DOB', 'Age group', 'Email', 'Class status', 'Joined', 'View']);
+    .toEqual(['Name', 'Username', 'Account type', 'Country', 'DOB', 'Age group', 'Email', 'Class status', 'Sparks', 'Joined', 'View']);
 });
 
 test('each profile is its own row; children right under their parent, marked "↳ child", greyed parent when only a child matched', async () => {

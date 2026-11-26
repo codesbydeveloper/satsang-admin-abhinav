@@ -8,7 +8,7 @@ import { Spark } from './brand';
 
 const TITLES = [
   ['/dashboard', 'Dashboard'], ['/users', 'Users'], ['/deletion-requests', 'Deletion requests'], ['/referrals', 'Referrals'], ['/blocked-words', 'Blocked words'],
-  ['/admins', 'Admins'], ['/audit-log', 'Audit log'], ['/account', 'My account'],
+  ['/admins', 'Admins'], ['/audit-log', 'Audit log'], ['/sparks-settings', 'Sparks settings'], ['/account', 'My account'],
 ];
 export const initials = (s = '') => s.replace(/@.*/, '').split(/[\s._-]+/).filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join('') || '?';
 
@@ -45,6 +45,7 @@ export default function Layout() {
             <div className="nav-label">Administration</div>
             {item('/admins', 'shield', 'Admins')}
             {item('/audit-log', 'list', 'Audit log')}
+            {item('/sparks-settings', 'spark', 'Sparks settings')}
           </>}
           <div className="nav-label">You</div>
           {item('/account', 'user', 'My account')}

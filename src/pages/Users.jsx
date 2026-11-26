@@ -13,10 +13,11 @@ import { Icon } from '../components/icons';
 
 export const SORT_COLUMNS = [
   ['name', 'Name'], ['username', 'Username'], ['accountType', 'Account type'], ['country', 'Country'], ['dob', 'DOB'],
-  ['ageGroup', 'Age group'], ['email', 'Email'], [null, 'Class status'], ['joined', 'Joined'],
+  ['ageGroup', 'Age group'], ['email', 'Email'], [null, 'Class status'], ['sparks', 'Sparks'], ['joined', 'Joined'],
 ];
 const SORT_KEYS = SORT_COLUMNS.map(([k]) => k).filter(Boolean);
-const defaultOrder = (sort) => (sort === 'joined' ? 'desc' : 'asc');
+// Joined and Sparks start with the biggest first (newest accounts / most Sparks); text columns A→Z.
+const defaultOrder = (sort) => (sort === 'joined' || sort === 'sparks' ? 'desc' : 'asc');
 export const ACCOUNT_TYPES = [['', 'All'], ['adult', 'Adult'], ['parent', 'Parent'], ['child', 'Child']];
 const FILTER_KEYS = ['q', 'country', 'ageGroup', 'accountType', 'classStatus', 'studentStatus', 'joinedSince'];
 const validInstant = (s) => (s && !Number.isNaN(Date.parse(s)) ? s : '');
@@ -232,6 +233,8 @@ function UserRow({ r }) {
           : r.email}
       </td>
       <td>{r.profileId ? <StudentChip status={r.studentStatus} /> : <Dash />}</td>
+      {/* the playable profile's real Sparks balance (backend sparksBalance); a parent account row has no profile */}
+      <td className="num">{r.profileId && typeof r.sparksBalance === 'number' ? r.sparksBalance.toLocaleString() : <Dash />}</td>
       <td title={fmt(r.joined || r.createdAt)}>{fmtDate(r.joined || r.createdAt)}</td>
       <td className="actions"><Link className="btn-small" to={`/users/${r.accountId}`} aria-label={`View ${who}`}>View</Link></td>
     </tr>

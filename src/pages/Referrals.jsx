@@ -19,15 +19,15 @@ export function StatusPill({ status }) {
 }
 
 const FIELDS = [
-  ['newUserSparks', 'New user Sparks', 'Reserved for the new user as soon as they enter a code.', 0, 10000],
-  ['referrerSparks', 'Referrer Sparks', 'For the friend who shared the code, after the new user’s first full quiz.', 0, 10000],
+  ['newUserSparks', 'New user Sparks', 'Added to the new user’s Sparks balance as soon as they enter a code.', 0, 10000],
+  ['referrerSparks', 'Referrer Sparks', 'For the friend who shared the code: pending in their balance until the new user’s first full quiz.', 0, 10000],
   ['windowHours', 'Window (hours)', 'How long after creating an account a code can still be entered.', 1, 8760],
 ];
 
 export default function Referrals() {
   return (
     <div className="page">
-      <PageHead title="Referrals" subtitle="Friends invite friends with a referral code. Sparks are reserved now and credited when the Sparks ledger launches (Milestone 2)." />
+      <PageHead title="Referrals" subtitle="Friends invite friends with a referral code. The new user’s Sparks go straight into their balance; the referrer’s stay pending until the new user’s first full quiz." />
       <ReferralSettings />
       <ReferralList />
     </div>
