@@ -8,13 +8,18 @@ import { sparksLabel } from '../pages/Referrals';
 
 const json = (status, body) => Promise.resolve({ ok: status < 400, status, json: () => Promise.resolve(body) });
 const SETTINGS = { newUserSparks: 25, referrerSparks: 50, windowHours: 48, maxPerReferrer: null };
-const LIST = { page: 1, pageSize: 25, total: 2, rows: [
+const LIST = { page: 1, pageSize: 25, total: 3, rows: [
   { id: 2, code: 'K7P2QX', status: 'waiting_for_first_quiz', referrer: { accountId: 4, accountType: 'adult', username: 'friend_1' },
     referee: { accountId: 9, accountType: 'adult', username: 'new_one' }, newUserSparks: 25, newUserStatus: 'reserved', referrerSparks: 50,
     createdAt: '2026-10-30 09:00:00', qualifiedAt: null, creditedAt: null },
   { id: 1, code: 'ABCD23', status: 'credited', referrer: null,
     referee: { accountId: 7, accountType: 'parent', username: null }, newUserSparks: 25, newUserStatus: 'credited', referrerSparks: 50,
     createdAt: '2026-10-29 09:00:00', qualifiedAt: '2026-10-29 12:00:00', creditedAt: null },
+  // both sides are parents without a child profile yet: each reward is held for the first child
+  { id: 3, code: 'PQRS45', status: 'qualified', referrer: { accountId: 8, accountType: 'parent', username: null },
+    referee: { accountId: 10, accountType: 'parent', username: null }, newUserSparks: 25, newUserStatus: 'reserved', referrerSparks: 50,
+    createdAt: '2026-10-28 09:00:00', qualifiedAt: '2026-10-28 12:00:00', creditedAt: null,
+    newUserWaitingForProfile: true, referrerWaitingForProfile: true },
 ] };
 
 let role = 'full_admin';
@@ -72,7 +77,10 @@ test('Full Admin: the list shows code, usernames and status, never emails; filte
   expect(within(table).getByText('Parent account #7')).toBeInTheDocument();
   expect(table.textContent).not.toMatch(/@/);
   // Sparks: friendly labels, never the raw backend status in brackets
-  const [, waiting, credited] = within(table).getAllByRole('row');
+  const [, waiting, credited, heldForChild] = within(table).getAllByRole('row');
+  expect(heldForChild).toHaveTextContent('New user +25 · Waiting for first child profile');
+  expect(heldForChild).toHaveTextContent('Referrer +50 · Waiting for first child profile');
+  expect(waiting).not.toHaveTextContent('child profile');
   expect(waiting).toHaveTextContent('New user +25 · Added');            // old M1 'reserved' is in the balance now
   expect(waiting).toHaveTextContent('Referrer +50 · Waiting for first quiz');
   expect(credited).toHaveTextContent('New user +25 · Added');
@@ -106,4 +114,8 @@ test('Sparks labels: credited / old reserved → Added, pending → Waiting for 
   expect(sparksLabel('waiting_for_first_quiz')).toBe('Waiting for first quiz');
   expect(sparksLabel('qualified')).toBe('Waiting for first quiz');
   expect(sparksLabel('rejected')).toBe('Not given');
+  // held until a parent creates the first child profile (backend newUserWaitingForProfile / referrerWaitingForProfile)
+  expect(sparksLabel('reserved', true)).toBe('Waiting for first child profile');
+  expect(sparksLabel('qualified', true)).toBe('Waiting for first child profile');
+  expect(sparksLabel('reserved', false)).toBe('Added');
 });

@@ -32,3 +32,4 @@
 - [x] "Reserved" Sparks wording replaced by the real balance (student verify / confirm interest, child delete, Referrals hints)
 - [x] Users table "Sparks" column (real balance, sortable, most first; families stay grouped) on backend `GET /admin/users` `sparksBalance` + `sort=sparks`
 - [x] Referrals list: friendly Sparks labels (Added / Waiting for first quiz / Not given) instead of the raw backend status; trusted-devices test pinned to a fixed clock
+- [x] Referrals: "Waiting for first child profile" when a reward is held because a parent (new user or referrer) has no child profile yet (backend `newUserWaitingForProfile` / `referrerWaitingForProfile`); Google Sheet script shows Sparks with thousands separators (the Sparks column itself comes from the backend export list)

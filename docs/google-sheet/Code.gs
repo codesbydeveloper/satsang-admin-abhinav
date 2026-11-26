@@ -148,7 +148,7 @@ function writeUsers_(data) {
       var r = sheet.getRange(2, i + 1, values.length - 1, 1);
       if (c.type === 'date') r.setNumberFormat('dd mmm yyyy');
       else if (c.type === 'datetime') r.setNumberFormat('dd mmm yyyy hh:mm');
-      else if (c.type === 'number') r.setNumberFormat('0');
+      else if (c.type === 'number') r.setNumberFormat(c.key === 'sparks' ? '#,##0' : '0');   // Sparks 1,500; ids plain
     });
   }
   sheet.autoResizeColumns(1, n);
