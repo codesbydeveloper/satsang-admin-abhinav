@@ -407,3 +407,25 @@ table.sparks-config td.cell-changed input { border-color:var(--brand); box-shado
 table.sparks-config input[aria-invalid="true"] { border-color:var(--err); }
 .change-list { margin:0 0 12px; padding-left:18px; }
 @media (max-width:640px) { dl.facts.sparks-facts { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+
+/* Home tab admin (M2 chunk 2.3C): News & Updates, Feedback, Daily Spin, Streak, Donate */
+.form-section { margin:18px 0 8px; font-size:12px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); }
+.form-section:first-child { margin-top:0; }
+.news-previews { display:grid; gap:12px; }
+.news-preview { border:1px solid var(--line); border-radius:var(--radius-sm); padding:12px 14px; background:var(--surface-2); }
+.news-preview-head { display:flex; justify-content:space-between; align-items:center; font-size:12px; color:var(--muted); margin-bottom:8px; }
+.news-preview img { display:block; width:100%; max-height:180px; object-fit:cover; border-radius:var(--radius-sm); margin-bottom:8px; }
+.news-preview-title { font-weight:700; font-size:16px; color:var(--fg); }
+.news-preview-body { white-space:pre-wrap; margin:8px 0 0; }
+[lang="gu"] { font-family:"Noto Sans Gujarati", "Shruti", system-ui, sans-serif; }
+td.feedback-msg { max-width:420px; white-space:pre-wrap; overflow-wrap:anywhere; }
+.quote { margin:0 0 14px; padding:8px 12px; border-left:3px solid var(--line-strong); background:var(--surface-2); white-space:pre-wrap; }
+table.spin-table input { width:100%; min-width:80px; } table.spin-table td.num input { width:100px; text-align:right; }
+table.spin-table input[aria-invalid="true"], .streak-grid input[aria-invalid="true"] { border-color:var(--err); }
+table.spin-table tfoot td { border-top:1px solid var(--line); }
+.spin-summary { display:flex; gap:24px; flex-wrap:wrap; padding:14px 20px 0; }
+.spin-summary div { display:flex; flex-direction:column; gap:2px; } .spin-summary b { font-size:20px; }
+.streak-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:0 16px; }
+.streak-grid input { width:100%; }
+a.btn-link { display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border:1px solid var(--line-strong); border-radius:var(--radius-sm); text-decoration:none; font-weight:600; min-height:38px; }
+@media (max-width:640px) { .streak-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }

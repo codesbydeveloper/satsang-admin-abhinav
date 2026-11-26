@@ -157,6 +157,24 @@ export const adminApi = {
   sparksConfig: () => api('/admin/sparks/config'),
   // Partial update (only the rows sent); audited sparks.config_changed. Returns { changed: [{ activity, ageGroup, from, to }], …config }.
   saveSparksConfig: (rewards) => api('/admin/sparks/config', { method: 'PUT', body: { rewards } }),
+  // Home tab (M2 chunk 2.3C; backend 2.3A). News: Full Admin + Content Editor; everything else Full Admin only.
+  // News list: { page, pageSize, total, items: [{ id, title: { en, gu }, body: { en, gu }, imageUrl, publishAt, pinned, active, … }] }.
+  news: (params) => api('/admin/news', { params }),   // q, status all|published|scheduled|inactive, page, pageSize
+  createNews: (b) => api('/admin/news', { method: 'POST', body: b }),   // audited news.created
+  updateNews: (id, b) => api(`/admin/news/${id}`, { method: 'PATCH', body: b }),   // only the fields sent change
+  deleteNews: (id) => api(`/admin/news/${id}`, { method: 'DELETE' }),
+  // Feedback: { page, pageSize, total, openCount, items: [{ id, username, isChild, category, message, status, adminNote, … }] }.
+  feedback: (params) => api('/admin/feedback', { params }),   // q ("#12" = id), status all|open|resolved, category all|bug|idea|other
+  updateFeedback: (id, status, note) => api(`/admin/feedback/${id}`, { method: 'PATCH', body: { status, ...(note !== undefined ? { note } : {}) } }),
+  // Daily Spin wheel: { isDefault, segments: [{ index, label, sparks, weight, chancePercent }], note }. PUT replaces the wheel.
+  spinSegments: () => api('/admin/home/spin-segments'),
+  saveSpinSegments: (segments) => api('/admin/home/spin-segments', { method: 'PUT', body: { segments } }),
+  // Streak Bonus: { isDefault, amounts: [day 1, day 2, …] } (days after the last repeat the last).
+  streakBonus: () => api('/admin/home/streak-bonus'),
+  saveStreakBonus: (amounts) => api('/admin/home/streak-bonus', { method: 'PUT', body: { amounts } }),
+  // Donate button: { donateUrl, isDefault, defaultDonateUrl }. "" hides the button in the app.
+  donateUrl: () => api('/admin/home/donate-url'),
+  saveDonateUrl: (donateUrl) => api('/admin/home/donate-url', { method: 'PUT', body: { donateUrl } }),
   setAgeGroup: (profileId, ageGroup, reason) => api(`/admin/users/profiles/${profileId}/age-group`, { method: 'PATCH', body: { ageGroup, reason } }),
   words: () => api('/admin/blocked-words'),
   addWord: (word, kind) => api('/admin/blocked-words', { method: 'POST', body: { word, kind } }),

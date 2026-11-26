@@ -14,6 +14,11 @@ import DeletionRequests from './pages/DeletionRequests';
 import Referrals from './pages/Referrals';
 import AcceptInvite from './pages/AcceptInvite';
 import SparksSettings from './pages/SparksSettings';
+import News from './pages/News';
+import Feedback from './pages/Feedback';
+import DailySpin from './pages/DailySpin';
+import Streak from './pages/Streak';
+import Donate from './pages/Donate';
 
 export default function App() {
   const { admin, ready, isFull } = useAuth();
@@ -25,7 +30,7 @@ export default function App() {
   if (pathname === '/accept-invite') return <AcceptInvite />;
   if (!ready) return <p className="center muted">Loading…</p>;
   if (!admin) return <Login />;
-  // Content Editors only see their dashboard and the blocked-words list (backend enforces this too).
+  // Content Editors only see their dashboard, News & Updates and the blocked-words list (backend enforces this too).
   const home = '/dashboard';
   return (
     <Routes>
@@ -40,7 +45,12 @@ export default function App() {
           <Route path="/admins" element={<Admins />} />
           <Route path="/audit-log" element={<AuditLog />} />
           <Route path="/sparks-settings" element={<SparksSettings />} />
+          <Route path="/daily-spin" element={<DailySpin />} />
+          <Route path="/streak" element={<Streak />} />
+          <Route path="/feedback" element={<Feedback />} />
+          <Route path="/donate" element={<Donate />} />
         </>}
+        <Route path="/news" element={<News />} />
         <Route path="/blocked-words" element={<BlockedWords />} />
         <Route path="/account" element={<Account />} />
         <Route path="*" element={<Navigate to={home} replace />} />

@@ -8,7 +8,8 @@ import { Spark } from './brand';
 
 const TITLES = [
   ['/dashboard', 'Dashboard'], ['/users', 'Users'], ['/deletion-requests', 'Deletion requests'], ['/referrals', 'Referrals'], ['/blocked-words', 'Blocked words'],
-  ['/admins', 'Admins'], ['/audit-log', 'Audit log'], ['/sparks-settings', 'Sparks settings'], ['/account', 'My account'],
+  ['/admins', 'Admins'], ['/audit-log', 'Audit log'], ['/sparks-settings', 'Sparks settings'], ['/news', 'News & Updates'], ['/daily-spin', 'Daily Spin'], ['/streak', 'Streak'],
+  ['/feedback', 'Feedback'], ['/donate', 'Donate'], ['/account', 'My account'],
 ];
 export const initials = (s = '') => s.replace(/@.*/, '').split(/[\s._-]+/).filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join('') || '?';
 
@@ -31,6 +32,8 @@ export default function Layout() {
         <div className="brand"><Spark size={36} /><div>Satsang Spark<small>Admin Panel</small></div></div>
         <nav aria-label="Main">
           {item('/dashboard', 'dashboard', 'Dashboard')}
+          <div className="nav-label">Content</div>
+          {item('/news', 'news', 'News & Updates')}
           {isFull && <>
             <div className="nav-label">People</div>
             {item('/users', 'users', 'Users')}
@@ -38,6 +41,11 @@ export default function Layout() {
               <span className="nav-badge" aria-hidden="true">{pending}</span><span className="sr-only">, {pending} pending</span>
             </>)}
             {item('/referrals', 'gift', 'Referrals')}
+            <div className="nav-label">Engagement</div>
+            {item('/daily-spin', 'wheel', 'Daily Spin')}
+            {item('/streak', 'flame', 'Streak')}
+            <div className="nav-label">Support</div>
+            {item('/feedback', 'message', 'Feedback')}
           </>}
           <div className="nav-label">Safety</div>
           {item('/blocked-words', 'ban', 'Blocked words')}
@@ -46,11 +54,13 @@ export default function Layout() {
             {item('/admins', 'shield', 'Admins')}
             {item('/audit-log', 'list', 'Audit log')}
             {item('/sparks-settings', 'spark', 'Sparks settings')}
+            <div className="nav-label">Settings</div>
+            {item('/donate', 'heart', 'Donate')}
           </>}
           <div className="nav-label">You</div>
           {item('/account', 'user', 'My account')}
         </nav>
-        <div className="side-foot">Version 1 · Milestone 1</div>
+        <div className="side-foot">Version 1 · Milestone 2</div>
       </aside>
       <div className="scrim" onClick={() => setOpen(false)} />
 
