@@ -195,6 +195,10 @@ const DEVICES = [
 ];
 
 test('My account lists trusted devices and removes one after confirming', async () => {
+  // "Last used" is relative to now: pin the clock (Date only, so timers and userEvent run normally) to 3 h after
+  // the fixture's lastUsedAt, so the check does not depend on today's date. afterEach restores real timers.
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date('2026-11-23T11:00:00.000Z'));
   sessionStorage.setItem('ssa_admin_token', 'tok');
   let list = DEVICES;
   routes['GET /admin/auth/me'] = () => json(200, { admin: EDITOR });
@@ -206,7 +210,7 @@ test('My account lists trusted devices and removes one after confirming', async 
   expect(screen.getByText('Safari on iPhone')).toBeInTheDocument();
   expect(screen.getByText('Removing a device means the next sign-in there needs an email code.')).toBeInTheDocument();
   const row = within(screen.getByTestId('device-11'));
-  expect(row.getByText(/ago|just now/i)).toBeInTheDocument();
+  expect(row.getByText('3 h ago')).toBeInTheDocument();
   expect(within(screen.getByTestId('device-12')).getByText('Never')).toBeInTheDocument();
 
   await user.click(row.getByRole('button', { name: 'Remove' }));

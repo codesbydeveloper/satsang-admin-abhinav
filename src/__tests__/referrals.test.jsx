@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import App from '../App';
 import { AuthProvider } from '../auth';
+import { sparksLabel } from '../pages/Referrals';
 
 const json = (status, body) => Promise.resolve({ ok: status < 400, status, json: () => Promise.resolve(body) });
 const SETTINGS = { newUserSparks: 25, referrerSparks: 50, windowHours: 48, maxPerReferrer: null };
@@ -11,8 +12,8 @@ const LIST = { page: 1, pageSize: 25, total: 2, rows: [
   { id: 2, code: 'K7P2QX', status: 'waiting_for_first_quiz', referrer: { accountId: 4, accountType: 'adult', username: 'friend_1' },
     referee: { accountId: 9, accountType: 'adult', username: 'new_one' }, newUserSparks: 25, newUserStatus: 'reserved', referrerSparks: 50,
     createdAt: '2026-10-30 09:00:00', qualifiedAt: null, creditedAt: null },
-  { id: 1, code: 'ABCD23', status: 'qualified', referrer: null,
-    referee: { accountId: 7, accountType: 'parent', username: null }, newUserSparks: 25, newUserStatus: 'reserved', referrerSparks: 50,
+  { id: 1, code: 'ABCD23', status: 'credited', referrer: null,
+    referee: { accountId: 7, accountType: 'parent', username: null }, newUserSparks: 25, newUserStatus: 'credited', referrerSparks: 50,
     createdAt: '2026-10-29 09:00:00', qualifiedAt: '2026-10-29 12:00:00', creditedAt: null },
 ] };
 
@@ -70,6 +71,13 @@ test('Full Admin: the list shows code, usernames and status, never emails; filte
   expect(within(table).getByText('Deleted account')).toBeInTheDocument();
   expect(within(table).getByText('Parent account #7')).toBeInTheDocument();
   expect(table.textContent).not.toMatch(/@/);
+  // Sparks: friendly labels, never the raw backend status in brackets
+  const [, waiting, credited] = within(table).getAllByRole('row');
+  expect(waiting).toHaveTextContent('New user +25 · Added');            // old M1 'reserved' is in the balance now
+  expect(waiting).toHaveTextContent('Referrer +50 · Waiting for first quiz');
+  expect(credited).toHaveTextContent('New user +25 · Added');
+  expect(credited).toHaveTextContent('Referrer +50 · Added');
+  expect(table.textContent).not.toMatch(/[()]|reserved|credited|pending/);   // raw values are lower case; the "Credited" status pill is not
 
   await user.click(screen.getByRole('button', { name: 'Qualified' }));
   await waitFor(() => expect(global.fetch.mock.calls.some(([u]) => u.includes('/admin/referrals?') && u.includes('status=qualified'))).toBe(true));
@@ -89,4 +97,13 @@ test('Content Editor: no Referrals link and /referrals goes back to the dashboar
   expect(screen.queryByRole('link', { name: 'Referrals' })).toBeNull();
   expect(screen.queryByText('Referral settings')).toBeNull();
   expect(global.fetch.mock.calls.some(([u]) => u.includes('/admin/referrals'))).toBe(false);
+});
+
+test('Sparks labels: credited / old reserved → Added, pending → Waiting for first quiz, rejected → Not given', () => {
+  expect(sparksLabel('credited')).toBe('Added');
+  expect(sparksLabel('reserved')).toBe('Added');
+  expect(sparksLabel('pending')).toBe('Waiting for first quiz');
+  expect(sparksLabel('waiting_for_first_quiz')).toBe('Waiting for first quiz');
+  expect(sparksLabel('qualified')).toBe('Waiting for first quiz');
+  expect(sparksLabel('rejected')).toBe('Not given');
 });

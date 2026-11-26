@@ -11,6 +11,13 @@ const STATUS = {
   credited: ['Credited', 'ok'],
   rejected: ['Rejected', 'muted'],
 };
+// Friendly labels for the Sparks of each side (never the raw backend value). New user: newUserStatus
+// 'credited' (in their balance) or the M1 'reserved' (moved into the ledger by backend migration 020) → "Added".
+// Referrer: follows the referral status: credited → "Added", rejected → "Not given", otherwise pending until the
+// new user's first full quiz.
+const SPARKS_LABEL = { credited: 'Added', reserved: 'Added', pending: 'Waiting for first quiz', waiting_for_first_quiz: 'Waiting for first quiz', qualified: 'Waiting for first quiz', rejected: 'Not given' };
+export const sparksLabel = (status) => SPARKS_LABEL[status] || 'Waiting for first quiz';
+
 const TABS = [['all', 'All'], ['waiting_for_first_quiz', 'Waiting'], ['qualified', 'Qualified'], ['credited', 'Credited'], ['rejected', 'Rejected']];
 
 export function StatusPill({ status }) {
@@ -136,7 +143,7 @@ function ReferralList() {
                 <td>{who(r.referrer)}</td>
                 <td>{who(r.referee)}</td>
                 <td><StatusPill status={r.status} /></td>
-                <td className="cell-sub">New user +{r.newUserSparks} ({r.newUserStatus})<br />Referrer +{r.referrerSparks}</td>
+                <td className="cell-sub">New user +{r.newUserSparks} · {sparksLabel(r.newUserStatus)}<br />Referrer +{r.referrerSparks} · {sparksLabel(r.status)}</td>
                 <td title={fmt(r.createdAt)}><div className="cell-main">{timeAgo(r.createdAt)}</div><div className="cell-sub">{fmtDate(r.createdAt)}</div></td>
                 <td className="cell-sub">{r.qualifiedAt ? fmtDate(r.qualifiedAt) : '—'}</td>
               </tr>

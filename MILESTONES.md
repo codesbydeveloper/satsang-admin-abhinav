@@ -30,4 +30,5 @@
 - [x] "Adjust Sparks" (Full Admin): amount (+ adds / − deducts) and required reason (3–255), confirm step with balance before → after, one transactionId per confirmed attempt (safe retry), toast with the new balance; below zero blocked in the form and the server's INSUFFICIENT_SPARKS (balance / needed) shown in the dialog
 - [x] Sparks settings page (Full Admin, sidebar → Administration): reward per activity (Quiz, Game, Puzzle, Learn) and age group, editable table (0–10,000, changed cells highlighted, "default" tag), Save → confirm with every from → to, sends only the changed rows; note "Values to be confirmed by Loyadham"
 - [x] "Reserved" Sparks wording replaced by the real balance (student verify / confirm interest, child delete, Referrals hints)
-- [ ] Users table "Sparks" column (balance, sortable): built in the panel (`row.sparksBalance`, `sort=sparks`), **needs the backend** `GET /admin/users` to return `sparksBalance` per row and accept `sort=sparks` (not in backend chunk 2.1)
+- [x] Users table "Sparks" column (real balance, sortable, most first; families stay grouped) on backend `GET /admin/users` `sparksBalance` + `sort=sparks`
+- [x] Referrals list: friendly Sparks labels (Added / Waiting for first quiz / Not given) instead of the raw backend status; trusted-devices test pinned to a fixed clock
